@@ -1,10 +1,8 @@
-using PlanejamentoObras.Dominio.Calendarios;
 using PlanejamentoObras.Dominio.Comum;
 using PlanejamentoObras.Dominio.Cronogramas;
 using PlanejamentoObras.Dominio.FisicoFinanceiro;
 using PlanejamentoObras.Dominio.Orcamentos;
 using PlanejamentoObras.Dominio.Testes.Cronogramas;
-using PlanejamentoObras.Dominio.Testes.Orcamentos;
 
 namespace PlanejamentoObras.Dominio.Testes.FisicoFinanceiro;
 
@@ -16,43 +14,19 @@ namespace PlanejamentoObras.Dominio.Testes.FisicoFinanceiro;
  */
 public sealed class InvariantesDoFisicoFinanceiroTests
 {
-    private static readonly CalendarioDeTrabalho Calendario = CalendarioDeTrabalho.DeSegundaASexta(
-    [
-        new(2026, 10, 12), new(2026, 11, 2), new(2026, 11, 20), new(2026, 12, 25),
-        new(2027, 1, 1), new(2027, 3, 26), new(2027, 4, 21), new(2027, 9, 7),
-    ]);
-
     [Theory]
     [MemberData(nameof(RedesAleatorias.Lotes), MemberType = typeof(RedesAleatorias))]
     public void Todo_fisico_financeiro_fecha_com_o_orcamento_e_respeita_o_cronograma(int lote)
     {
         foreach (var semente in RedesAleatorias.SementesDoLote(lote))
         {
-            var cronograma = RedesAleatorias.Gerar(semente);
-            var obra = ProgramacaoDoCronograma.Programar(cronograma, new DateOnly(2026, 10, 1).AddDays(semente % 365), Calendario);
-            var planilha = OrcamentoVinculado(semente, cronograma);
+            var (obra, planilha) = ObrasAleatorias.Gerar(semente);
 
             foreach (var datas in Enum.GetValues<DatasDoCronograma>())
             {
                 Conferir(planilha, obra, CalculadoraDoFisicoFinanceiro.Calcular(planilha, obra, datas), $"semente {semente}, {datas}");
             }
         }
-    }
-
-    private static OrcamentoCalculado OrcamentoVinculado(int semente, Cronograma cronograma)
-    {
-        var (baseDeCustos, orcamento) = OrcamentosAleatorios.Gerar(semente);
-        var codigos = cronograma.Atividades.Select(atividade => atividade.Codigo.Valor).ToList();
-        var sorteio = new Random(semente);
-
-        foreach (var item in CalculadoraDoOrcamento.Calcular(orcamento, baseDeCustos).Itens)
-        {
-#pragma warning disable CA5394 // Aleatório não criptográfico de propósito: o que se quer é reprodutibilidade.
-            orcamento.VincularAtividade(item.Numero.Valor, codigos[sorteio.Next(codigos.Count)]);
-#pragma warning restore CA5394
-        }
-
-        return CalculadoraDoOrcamento.Calcular(orcamento, baseDeCustos);
     }
 
     private static void Conferir(OrcamentoCalculado planilha, CronogramaProgramado obra, CronogramaFisicoFinanceiro fisicoFinanceiro, string onde)
@@ -83,6 +57,11 @@ public sealed class InvariantesDoFisicoFinanceiroTests
             Assert.True(linha.Valores.Sum(valor => valor.Valor) == linha.Total.Valor, $"{aqui}: os meses não somam o total da linha");
             Assert.All(linha.Valores, valor => Assert.True(valor >= Dinheiro.Zero && valor.EstaEmCentavos, $"{aqui}: valor negativo ou fora do centavo"));
 
+            // O custo direto, distribuído do mesmo jeito, fecha do mesmo jeito.
+            Assert.Equal(periodos.Count, linha.Custos.Count);
+            Assert.True(linha.Custos.Sum(custo => custo.Valor) == linha.CustoTotal.Valor, $"{aqui}: os meses não somam o custo da linha");
+            Assert.All(linha.Custos, custo => Assert.True(custo >= Dinheiro.Zero && custo.EstaEmCentavos, $"{aqui}: custo negativo ou fora do centavo"));
+
             // Etapa: mês a mês, a soma do que está logo abaixo dela.
             var filhos = fisicoFinanceiro.Linhas
                 .Where(outra => outra.Nivel == linha.Nivel + 1 && outra.Numero.Valor.StartsWith(linha.Numero.Valor + ".", StringComparison.Ordinal))
@@ -93,6 +72,7 @@ public sealed class InvariantesDoFisicoFinanceiroTests
                 for (var mes = 0; mes < periodos.Count; mes++)
                 {
                     Assert.True(filhos.Sum(filho => filho.Valores[mes].Valor) == linha.Valores[mes].Valor, $"{aqui}: o mês {mes + 1} não soma os filhos");
+                    Assert.True(filhos.Sum(filho => filho.Custos[mes].Valor) == linha.Custos[mes].Valor, $"{aqui}: o custo do mês {mes + 1} não soma os filhos");
                 }
             }
         }
@@ -123,7 +103,7 @@ public sealed class InvariantesDoFisicoFinanceiroTests
 
         for (var dia = inicio; dia <= termino; dia = dia.AddDays(1))
         {
-            if (atividade.EhMarco || Calendario.EhDiaUtil(dia))
+            if (atividade.EhMarco || obra.Calendario.EhDiaUtil(dia))
             {
                 var mes = new DateOnly(dia.Year, dia.Month, 1);
                 diasPorMes[mes] = diasPorMes.GetValueOrDefault(mes) + 1;
@@ -131,16 +111,20 @@ public sealed class InvariantesDoFisicoFinanceiroTests
         }
 
         var totalDeDias = diasPorMes.Values.Sum();
-        var valores = fisicoFinanceiro.Linha(item.Numero.Valor).Valores;
+        var distribuida = fisicoFinanceiro.Linha(item.Numero.Valor);
 
         for (var mes = 0; mes < fisicoFinanceiro.Periodos.Count; mes++)
         {
             var dias = diasPorMes.GetValueOrDefault(fisicoFinanceiro.Periodos[mes].Mes);
-            var exato = item.Total.Valor * dias / totalDeDias;
+            var valorExato = item.Total.Valor * dias / totalDeDias;
+            var custoExato = item.CustoTotal.Valor * dias / totalDeDias;
 
             Assert.True(
-                Math.Abs(valores[mes].Valor - exato) < 0.01m,
-                $"{onde}, item {item.Numero}: no mês {mes + 1}, {valores[mes]} para {dias} de {totalDeDias} dias de {item.Total}");
+                Math.Abs(distribuida.Valores[mes].Valor - valorExato) < 0.01m,
+                $"{onde}, item {item.Numero}: no mês {mes + 1}, {distribuida.Valores[mes]} para {dias} de {totalDeDias} dias de {item.Total}");
+            Assert.True(
+                Math.Abs(distribuida.Custos[mes].Valor - custoExato) < 0.01m,
+                $"{onde}, item {item.Numero}: no mês {mes + 1}, custo {distribuida.Custos[mes]} para {dias} de {totalDeDias} dias de {item.CustoTotal}");
         }
     }
 }

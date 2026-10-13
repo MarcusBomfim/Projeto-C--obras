@@ -16,6 +16,11 @@ namespace PlanejamentoObras.Dominio.FisicoFinanceiro;
 /// <see cref="Rateio"/>). Um marco concentra o valor no dia dele.
 /// </para>
 /// <para>
+/// O custo direto do item se distribui do mesmo jeito, com os mesmos pesos:
+/// o valor, a preço de venda, é o que se mede e se fatura; o custo é o que se
+/// gasta — e é a base do valor agregado.
+/// </para>
+/// <para>
 /// Não há cronograma físico-financeiro de orçamento pela metade: todo item
 /// precisa estar vinculado a uma atividade que exista no cronograma, senão a
 /// soma dos meses não daria o total da obra. Os que faltam vêm todos numa
@@ -44,24 +49,28 @@ public static class CalculadoraDoFisicoFinanceiro
 
         // Itens primeiro; cada item soma o que é dele em cada etapa acima dele.
         var valores = orcamento.Linhas.ToDictionary(linha => linha.Numero, _ => new Dinheiro[meses.Count]);
+        var custos = orcamento.Linhas.ToDictionary(linha => linha.Numero, _ => new Dinheiro[meses.Count]);
 
         foreach (var item in orcamento.Itens)
         {
-            var distribuidos = Distribuir(item, cronograma.Da(item.Atividade!.Valor), datas, cronograma, posicaoDoMes);
+            // Preço e custo andam juntos: os mesmos dias, os mesmos pesos.
+            var dias = DiasPorMes(cronograma.Da(item.Atividade!.Valor), datas, cronograma, posicaoDoMes);
+            var valorDoItem = Rateio.Distribuir(item.Total, dias);
+            var custoDoItem = Rateio.Distribuir(item.CustoTotal, dias);
 
-            foreach (var numero in Ancestrais(item.Numero).Append(item.Numero))
+            foreach (var numero in item.Numero.Ancestrais().Append(item.Numero))
             {
-                var linha = valores[numero];
-
                 for (var mes = 0; mes < meses.Count; mes++)
                 {
-                    linha[mes] += distribuidos[mes];
+                    valores[numero][mes] += valorDoItem[mes];
+                    custos[numero][mes] += custoDoItem[mes];
                 }
             }
         }
 
         var linhas = orcamento.Linhas
-            .Select(linha => new LinhaDoFisicoFinanceiro(linha.Numero, linha.Descricao, linha.Total, valores[linha.Numero]))
+            .Select(linha => new LinhaDoFisicoFinanceiro(
+                linha.Numero, linha.Descricao, linha.Total, valores[linha.Numero], linha.CustoTotal, custos[linha.Numero]))
             .ToList();
 
         return new CronogramaFisicoFinanceiro(datas, Periodos(meses, linhas, orcamento.Total), linhas, orcamento.Total);
@@ -100,8 +109,8 @@ public static class CalculadoraDoFisicoFinanceiro
         }
     }
 
-    private static Dinheiro[] Distribuir(
-        LinhaDeItem item,
+    /// <summary>Quantos dias de trabalho a atividade tem em cada mês da obra.</summary>
+    private static int[] DiasPorMes(
         AtividadeProgramada atividade,
         DatasDoCronograma datas,
         CronogramaProgramado cronograma,
@@ -120,7 +129,7 @@ public static class CalculadoraDoFisicoFinanceiro
             diasPorMes[posicaoDoMes[PrimeiroDoMes(dia)]]++;
         }
 
-        return Rateio.Distribuir(item.Total, diasPorMes);
+        return diasPorMes;
     }
 
     private static List<PeriodoDoFisicoFinanceiro> Periodos(
@@ -160,17 +169,6 @@ public static class CalculadoraDoFisicoFinanceiro
         }
 
         return meses;
-    }
-
-    /// <summary>As etapas acima de uma linha: de "2.2.1", as etapas 2 e 2.2.</summary>
-    private static IEnumerable<NumeroDaEap> Ancestrais(NumeroDaEap numero)
-    {
-        var posicoes = numero.Posicoes();
-
-        for (var nivel = 1; nivel < posicoes.Count; nivel++)
-        {
-            yield return NumeroDaEap.Ler(string.Join('.', posicoes.Take(nivel)));
-        }
     }
 
     private static DateOnly PrimeiroDoMes(DateOnly dia) => new(dia.Year, dia.Month, 1);

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using PlanejamentoObras.Dominio.Comum;
 
@@ -27,7 +28,14 @@ public sealed record NumeroDaEap
     /// <summary>1 para uma etapa de primeiro nível, 2 para o que está dentro dela, e assim por diante.</summary>
     public int Nivel { get; }
 
-    public static NumeroDaEap Ler(string texto)
+    public static NumeroDaEap Ler(string texto) =>
+        TentarLer(texto, out var numero)
+            ? numero
+            : throw new ExcecaoDeDominio(
+                $"\"{texto}\" não é um número de EAP. Use posições a partir de 1, separadas por ponto: 2.1.3.");
+
+    /// <summary>Como <see cref="Ler"/>, para quem junta vários erros antes de acusá-los.</summary>
+    internal static bool TentarLer(string? texto, [NotNullWhen(true)] out NumeroDaEap? numero)
     {
         var partes = (texto ?? string.Empty).Trim().Split('.');
         var posicoes = new List<int>(partes.Length);
@@ -36,14 +44,17 @@ public sealed record NumeroDaEap
         {
             if (!int.TryParse(parte, NumberStyles.None, CultureInfo.InvariantCulture, out var posicao) || posicao < 1)
             {
-                throw new ExcecaoDeDominio(
-                    $"\"{texto}\" não é um número de EAP. Use posições a partir de 1, separadas por ponto: 2.1.3.");
+                numero = null;
+
+                return false;
             }
 
             posicoes.Add(posicao);
         }
 
-        return De(posicoes);
+        numero = De(posicoes);
+
+        return true;
     }
 
     /// <summary>As posições, a partir de 1: "2.1.3" dá 2, 1 e 3.</summary>
@@ -56,4 +67,15 @@ public sealed record NumeroDaEap
         new(string.Join('.', posicoes), posicoes.Count);
 
     internal NumeroDaEap Filho(int posicao) => new($"{Valor}.{posicao}", Nivel + 1);
+
+    /// <summary>As etapas acima desta linha, de cima para baixo: de "2.2.1", as etapas 2 e 2.2.</summary>
+    internal IEnumerable<NumeroDaEap> Ancestrais()
+    {
+        var posicoes = Posicoes();
+
+        for (var nivel = 1; nivel < posicoes.Count; nivel++)
+        {
+            yield return De([.. posicoes.Take(nivel)]);
+        }
+    }
 }

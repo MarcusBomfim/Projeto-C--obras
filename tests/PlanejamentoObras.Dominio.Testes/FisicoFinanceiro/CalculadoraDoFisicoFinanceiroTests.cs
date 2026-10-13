@@ -7,81 +7,19 @@ using PlanejamentoObras.Dominio.Orcamentos;
 
 namespace PlanejamentoObras.Dominio.Testes.FisicoFinanceiro;
 
-/*
- * Obra a partir da segunda 19/10/2026, de segunda a sexta, com os feriados de
- * 02/11 (Finados) e 20/11 (Consciência Negra).
- *
- *   SER  serviços preliminares, 5 dias   19/10 a 23/10          outubro: 5
- *   PLA  placa da obra, 2 dias, solta    cedo 19/10 a 20/10     outubro: 2
- *                                        tarde 16/11 a 17/11    novembro: 2
- *   FUN  fundações, 6 dias, após SER     26/10 a 30/10 e 03/11  outubro: 5, novembro: 1
- *   ALV  alvenaria, 10 dias, após FUN    04/11 a 17/11          novembro: 10
- *   ENT  entrega, marco, após ALV        17/11                  novembro
- *
- * Orçamento com BDI de 25 %, um item por atividade:
- *
- *   1.1  SER  10.000,00   outubro
- *   1.2  PLA   1.000,00   outubro (cedo) ou novembro (tarde)
- *   2.1  FUN  10.000,00   5/6 e 1/6: 8.333,333… e 1.666,666… → 8.333,33 e 1.666,67
- *   2.2  ALV  20.000,00   novembro
- *   2.3  ENT     500,00   novembro, no dia do marco
- *
- *   cedo:   outubro 19.333,33   novembro 22.166,67   total 41.500,00
- *   tarde:  outubro 18.333,33   novembro 23.166,67
- */
+// A obra e os números esperados estão abertos no comentário de CasaTerrea.
 public sealed class CalculadoraDoFisicoFinanceiroTests
 {
-    private static readonly CalendarioDeTrabalho Calendario =
-        CalendarioDeTrabalho.DeSegundaASexta([new DateOnly(2026, 11, 2), new DateOnly(2026, 11, 20)]);
+    private static readonly CalendarioDeTrabalho Calendario = CasaTerrea.Calendario;
 
     private static readonly DateOnly Outubro = new(2026, 10, 1);
     private static readonly DateOnly Novembro = new(2026, 11, 1);
 
     private static Dinheiro R(decimal valor) => Dinheiro.Reais(valor);
 
-    private static CronogramaProgramado Obra()
-    {
-        var cronograma = new Cronograma("Casa térrea");
-        cronograma.AdicionarAtividade("SER", "Serviços preliminares", 5);
-        cronograma.AdicionarAtividade("PLA", "Placa da obra", 2);
-        cronograma.AdicionarAtividade("FUN", "Fundações", 6);
-        cronograma.AdicionarAtividade("ALV", "Alvenaria", 10);
-        cronograma.AdicionarAtividade("ENT", "Entrega", 0);
-        cronograma.AdicionarDependencia("SER", "FUN");
-        cronograma.AdicionarDependencia("FUN", "ALV");
-        cronograma.AdicionarDependencia("ALV", "ENT");
+    private static CronogramaProgramado Obra() => CasaTerrea.Obra();
 
-        return ProgramacaoDoCronograma.Programar(cronograma, new DateOnly(2026, 10, 19), Calendario);
-    }
-
-    private static OrcamentoCalculado Orcamento(Action<Orcamento>? ajustar = null)
-    {
-        var baseDeCustos = new BaseDeCustos("Verbas", new DateOnly(2026, 9, 1));
-        baseDeCustos.AdicionarInsumo("SERV", "Serviços preliminares", "vb", TipoDeInsumo.Material, 8_000m);
-        baseDeCustos.AdicionarInsumo("PLAC", "Placa da obra", "un", TipoDeInsumo.Material, 800m);
-        baseDeCustos.AdicionarInsumo("FUND", "Fundações", "vb", TipoDeInsumo.Material, 8_000m);
-        baseDeCustos.AdicionarInsumo("ALVE", "Alvenaria", "vb", TipoDeInsumo.Material, 16_000m);
-        baseDeCustos.AdicionarInsumo("LIMP", "Limpeza e entrega", "vb", TipoDeInsumo.Material, 400m);
-
-        var orcamento = new Orcamento("Casa térrea", Bdi.Informado(25m));
-        orcamento.AdicionarEtapa("Serviços iniciais");
-        orcamento.AdicionarItem("1", "SERV", 1m);
-        orcamento.AdicionarItem("1", "PLAC", 1m);
-        orcamento.AdicionarEtapa("Obra");
-        orcamento.AdicionarItem("2", "FUND", 1m);
-        orcamento.AdicionarItem("2", "ALVE", 1m);
-        orcamento.AdicionarItem("2", "LIMP", 1m);
-
-        orcamento.VincularAtividade("1.1", "SER");
-        orcamento.VincularAtividade("1.2", "PLA");
-        orcamento.VincularAtividade("2.1", "FUN");
-        orcamento.VincularAtividade("2.2", "ALV");
-        orcamento.VincularAtividade("2.3", "ENT");
-
-        ajustar?.Invoke(orcamento);
-
-        return CalculadoraDoOrcamento.Calcular(orcamento, baseDeCustos);
-    }
+    private static OrcamentoCalculado Orcamento(Action<Orcamento>? ajustar = null) => CasaTerrea.Planilha(ajustar);
 
     private static CronogramaFisicoFinanceiro FisicoFinanceiro(DatasDoCronograma datas = DatasDoCronograma.Cedo) =>
         CalculadoraDoFisicoFinanceiro.Calcular(Orcamento(), Obra(), datas);
@@ -120,6 +58,20 @@ public sealed class CalculadoraDoFisicoFinanceiroTests
     {
         // Fundações: 5 dias em outubro e 1 em novembro (02/11 é feriado).
         Assert.Equal([R(8_333.33m), R(1_666.67m)], FisicoFinanceiro().Linha("2.1").Valores);
+    }
+
+    [Fact]
+    public void Distribui_tambem_o_custo_pelos_mesmos_dias()
+    {
+        /*
+         * As fundações custam 8.000,00 (sem o BDI de 25 %): 5/6 e 1/6 dão
+         * 6.666,666… e 1.333,333…, rateados em 6.666,67 e 1.333,33.
+         */
+        var fisicoFinanceiro = FisicoFinanceiro();
+
+        Assert.Equal(R(8_000m), fisicoFinanceiro.Linha("2.1").CustoTotal);
+        Assert.Equal([R(6_666.67m), R(1_333.33m)], fisicoFinanceiro.Linha("2.1").Custos);
+        Assert.Equal([R(6_666.67m), R(17_733.33m)], fisicoFinanceiro.Linha("2").Custos);
     }
 
     [Fact]
