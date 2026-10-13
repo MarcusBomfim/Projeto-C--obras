@@ -1,0 +1,14 @@
+<Project>
+  <!--
+    Versões de pacote num lugar só. Cada projeto declara QUAL pacote usa;
+    a versão é decidida aqui. Atualizar uma dependência é uma linha, e não
+    existe a situação de dois projetos da mesma solução em versões
+    diferentes do mesmo pacote.
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="xunit.v3.mtp-v2" Version="4.0.0" />
+  </ItemGroup>
+</Project>

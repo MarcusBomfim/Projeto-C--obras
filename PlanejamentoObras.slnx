@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PlanejamentoObras.Dominio/PlanejamentoObras.Dominio.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PlanejamentoObras.Arquitetura.Testes/PlanejamentoObras.Arquitetura.Testes.csproj" />
+    <Project Path="tests/PlanejamentoObras.Dominio.Testes/PlanejamentoObras.Dominio.Testes.csproj" />
+  </Folder>
+</Solution>
