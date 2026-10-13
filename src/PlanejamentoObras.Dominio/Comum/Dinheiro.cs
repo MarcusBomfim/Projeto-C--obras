@@ -1,5 +1,3 @@
-using System.Globalization;
-
 namespace PlanejamentoObras.Dominio.Comum;
 
 /// <summary>
@@ -25,14 +23,6 @@ namespace PlanejamentoObras.Dominio.Comum;
 public readonly record struct Dinheiro : IComparable<Dinheiro>
 {
     public static readonly Dinheiro Zero;
-
-    // Montado à mão, e não com CultureInfo("pt-BR"): o formato não pode
-    // depender dos dados de cultura instalados na máquina que roda.
-    private static readonly NumberFormatInfo FormatoBrasileiro = NumberFormatInfo.ReadOnly(new NumberFormatInfo
-    {
-        NumberDecimalSeparator = ",",
-        NumberGroupSeparator = ".",
-    });
 
     public Dinheiro(decimal valor) => Valor = valor;
 
@@ -60,7 +50,7 @@ public readonly record struct Dinheiro : IComparable<Dinheiro>
     /// <summary>"R$ 1.234,56". Valores fora do centavo mostram todas as casas: "R$ 7,75272".</summary>
     public override string ToString()
     {
-        var absoluto = Math.Abs(Valor).ToString("#,##0.00##########", FormatoBrasileiro);
+        var absoluto = FormatoBrasileiro.Numero(Math.Abs(Valor));
 
         return Valor < 0 ? $"-R$ {absoluto}" : $"R$ {absoluto}";
     }
