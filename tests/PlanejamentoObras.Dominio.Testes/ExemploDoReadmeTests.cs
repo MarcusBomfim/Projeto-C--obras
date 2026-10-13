@@ -3,7 +3,10 @@ using PlanejamentoObras.Dominio.Comum;
 using PlanejamentoObras.Dominio.Cronogramas;
 using PlanejamentoObras.Dominio.Custos;
 using PlanejamentoObras.Dominio.FisicoFinanceiro;
+using PlanejamentoObras.Dominio.LinhasDeBase;
+using PlanejamentoObras.Dominio.Medicoes;
 using PlanejamentoObras.Dominio.Orcamentos;
+using PlanejamentoObras.Dominio.ValorAgregado;
 
 namespace PlanejamentoObras.Dominio.Testes;
 
@@ -182,5 +185,54 @@ public sealed class ExemploDoReadmeTests
         Assert.Equal(
             [R(227_239.92m), R(439_141.56m), R(545_254.54m), R(455_792.64m)],
             tarde.Periodos.Select(periodo => periodo.Valor));
+    }
+
+    // ---------- linha de base, medição e valor agregado ----------
+
+    private static Acompanhamento DuasMedicoes()
+    {
+        var linhaDeBase = LinhaDeBase.Estabelecer("Linha de base 1 — contrato", new DateOnly(2026, 9, 28), Planilha(), Obra());
+        var acompanhamento = new Acompanhamento(linhaDeBase);
+
+        acompanhamento.RegistrarMedicao(
+            new DateOnly(2026, 10, 30),
+            new LancamentoDeMedicao("1.1", 1250m, CustoReal: 4_300m),
+            new LancamentoDeMedicao("2.1", 1m, CustoReal: 104_900m),
+            new LancamentoDeMedicao("2.2", 0.15m, CustoReal: 63_000m));
+
+        acompanhamento.RegistrarMedicao(
+            new DateOnly(2026, 11, 30),
+            new LancamentoDeMedicao("2.2", 0.55m, CustoReal: 232_000m),
+            new LancamentoDeMedicao("3.1", 300m, CustoReal: 18_900m),
+            new LancamentoDeMedicao("4.1", 0.10m, CustoReal: 9_600m));
+
+        return acompanhamento;
+    }
+
+    [Fact]
+    public void O_boletim_de_novembro_do_README()
+    {
+        var boletim = EmissaoDoBoletim.Emitir(DuasMedicoes(), medicao: 2);
+
+        Assert.Equal(
+            [R(278_446.08m), R(21_063.00m), R(10_604.54m)],
+            boletim.Linhas.OfType<ItemDoBoletim>().Where(item => item.QuantidadeNoMes != 0).Select(item => item.ValorNoMes));
+        Assert.Equal((R(310_113.62m), R(512_040.26m)), (boletim.ValorNoMes, boletim.ValorAcumulado));
+        Assert.Equal(0.307m, decimal.Round(boletim.PercentualExecutado, 3));
+    }
+
+    [Fact]
+    public void O_valor_agregado_de_novembro_do_README()
+    {
+        var analise = CalculadoraDeValorAgregado.Calcular(DuasMedicoes());
+        var obra = analise.Obra;
+
+        Assert.Equal(
+            (R(1_388_822.24m), R(563_875.75m), R(416_697.00m), R(432_700.00m)),
+            (obra.OrcamentoNoTermino, obra.ValorPlanejado, obra.ValorAgregado, obra.CustoReal));
+        Assert.Equal((0.74m, 0.96m), (decimal.Round(obra.IndiceDeDesempenhoDePrazo!.Value, 2), decimal.Round(obra.IndiceDeDesempenhoDeCusto!.Value, 2)));
+        Assert.Equal((R(1_442_159.13m), R(-53_336.89m)), (obra.EstimativaNoTermino, obra.VariacaoNoTermino));
+        Assert.Equal((1.61m, 4.96m), (decimal.Round(analise.Prazo.PrazoAgregadoEmMeses, 2), decimal.Round(analise.Prazo.DuracaoEstimadaEmMeses!.Value, 2)));
+        Assert.Equal(0.40m, decimal.Round(analise.Linha("4").Indicadores.IndiceDeDesempenhoDePrazo!.Value, 2));
     }
 }

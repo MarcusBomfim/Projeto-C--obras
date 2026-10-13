@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/MarcusBomfim/Projeto-C--obras/actions/workflows/ci.yml/badge.svg)](https://github.com/MarcusBomfim/Projeto-C--obras/actions/workflows/ci.yml)
 
-Planejamento de obra como o engenheiro de planejamento faz: rede de precedências e caminho crítico, orçamento com composições de custo e BDI, e o cronograma físico-financeiro que junta os dois — e, nas próximas partes, linha de base e valor agregado.
+Planejamento e controle de obra como o engenheiro de planejamento faz: rede de precedências e caminho crítico, orçamento com composições de custo e BDI, o cronograma físico-financeiro que junta os dois — e a obra medida mês a mês contra o plano aprovado, com boletim de medição e valor agregado.
 
 C# 14 · .NET 10 · xUnit v3 · GitHub Actions
 
@@ -18,11 +18,13 @@ O método do caminho crítico responde três perguntas:
 
 O orçamento responde **quanto** a obra custa. Junto com o cronograma, responde a pergunta que o cliente e o banco fazem: **quanto se gasta em cada mês** — o cronograma físico-financeiro.
 
+Aprovado, o plano vira régua: a **linha de base**. Todo mês a obra é medida contra ela. O boletim de medição diz quanto se paga; o **valor agregado** diz se a obra está atrasada, se está gastando mais que o orçado e onde vai terminar.
+
 Este projeto é a continuação do [gestao-obras](https://github.com/MarcusBomfim/gestao-obras), que registra o que aconteceu no canteiro e cita, entre as suas limitações, a falta de um cronograma de verdade. Aqui se planeja o que vai acontecer.
 
 ## Exemplo
 
-O exemplo inteiro — rede, base de custos, orçamento e físico-financeiro — está em [`ExemploDoReadmeTests`](tests/PlanejamentoObras.Dominio.Testes/ExemploDoReadmeTests.cs). É um teste: se o código mudar e algum número desta página deixar de ser verdade, o build quebra.
+O exemplo inteiro — rede, base de custos, orçamento, físico-financeiro, medições e valor agregado — está em [`ExemploDoReadmeTests`](tests/PlanejamentoObras.Dominio.Testes/ExemploDoReadmeTests.cs). É um teste: se o código mudar e algum número desta página deixar de ser verdade, o build quebra.
 
 ### Cronograma
 
@@ -153,6 +155,57 @@ Cada item se distribui pelos dias úteis da atividade a que está vinculado. A e
 
 A diferença entre as duas curvas é a folga da elétrica: pelas datas tarde, os três dias dela em novembro passam para dezembro. A soma dos meses é o total do orçamento ao centavo, nas duas — ver [ADR-0006](docs/adr/0006-fisico-financeiro-derivado-do-cronograma.md).
 
+### Linha de base, medição e valor agregado
+
+Aprovado o plano, ele é congelado numa linha de base, e a obra passa a ser medida contra ela, mês a mês: a quantidade executada de cada item e o custo real dele.
+
+```csharp
+var linhaDeBase = LinhaDeBase.Estabelecer("Linha de base 1 — contrato", new DateOnly(2026, 9, 28), planilha, obra);
+var acompanhamento = new Acompanhamento(linhaDeBase);
+
+acompanhamento.RegistrarMedicao(new DateOnly(2026, 10, 30),
+    new LancamentoDeMedicao("1.1", 1250m, CustoReal: 4_300m),
+    new LancamentoDeMedicao("2.1", 1m, CustoReal: 104_900m),
+    new LancamentoDeMedicao("2.2", 0.15m, CustoReal: 63_000m));
+
+acompanhamento.RegistrarMedicao(new DateOnly(2026, 11, 30),
+    new LancamentoDeMedicao("2.2", 0.55m, CustoReal: 232_000m),
+    new LancamentoDeMedicao("3.1", 300m, CustoReal: 18_900m),
+    new LancamentoDeMedicao("4.1", 0.10m, CustoReal: 9_600m));
+
+var boletim = EmissaoDoBoletim.Emitir(acompanhamento, medicao: 2);
+var analise = CalculadoraDeValorAgregado.Calcular(acompanhamento);
+```
+
+O boletim de novembro, a preço de contrato — o valor da medição é o que se paga no mês:
+
+| Item | No mês | Acumulado | Valor no mês | Valor acumulado |
+|---|--:|--:|--:|--:|
+| 2.2 Estrutura de concreto armado | 0,55 vb | 0,70 de 1,00 | 278.446,08 | 354.385,92 |
+| 3.1 Alvenaria de vedação com bloco cerâmico 9x19x19 cm | 300,00 m² | 300,00 de 2.430,50 | 21.063,00 | 21.063,00 |
+| 4.1 Instalações elétricas | 0,10 vb | 0,10 de 1,00 | 10.604,54 | 10.604,54 |
+| **Medição de novembro** | | | **310.113,62** | **512.040,26** |
+
+Medir além do contratado é recusado — exige aditivo —, e erro numa medição já registrada se corrige com glosa na seguinte, como no boletim de papel. O valor do mês é a diferença entre acumulados, para o item todo medido valer exatamente o contratado ([ADR-0008](docs/adr/0008-medicao-historico-que-so-cresce.md)).
+
+E o valor agregado em novembro, **a custo**: é com o custo orçado do que foi executado que o custo real se compara, e não com o preço de venda, que inclui o BDI ([ADR-0009](docs/adr/0009-valor-agregado-a-custo-e-prazo-agregado.md)).
+
+| Indicador | Novembro |
+|---|--:|
+| Valor planejado (VP, ou PV) | 563.875,75 |
+| Valor agregado (VA, ou EV) | 416.697,00 |
+| Custo real (CR, ou AC) | 432.700,00 |
+| Índice de desempenho de prazo (IDP, ou SPI) | 0,74 |
+| Índice de desempenho de custo (IDC, ou CPI) | 0,96 |
+| Estimativa no término (ENT, ou EAC) | 1.442.159,13 |
+| Variação no término (VNT, ou VAC) | −53.336,89 |
+| Prazo agregado | 1,61 mês, em 2 decorridos |
+| Duração estimada | 4,96 meses, de 4 planejados |
+
+A obra está atrasada e acima do custo: em dois meses, executou o que o plano previa para 1,61, e gasta R$ 1,04 para cada real orçado. Mantido o ritmo, termina em cinco meses em vez de quatro, R$ 53 mil acima do orçamento. Por etapa, quem mais segura é instalações e acabamentos, com IDP de 0,40.
+
+O prazo agregado mede o atraso em meses. Ao contrário do IDP clássico, ele não volta a 1 quando a obra termina atrasada — VA e VP chegam os dois ao orçamento no fim, mas o tempo gasto não volta.
+
 ## Roteiro
 
 O projeto é construído em partes, cada uma entregue funcionando, testada e documentada.
@@ -161,7 +214,7 @@ O projeto é construído em partes, cada uma entregue funcionando, testada e doc
 |--:|---|---|
 | 1 | Cronograma: rede de precedências, caminho crítico, calendário e datas | ✅ |
 | 2 | Base de custos e composições, orçamento com EAP e BDI, cronograma físico-financeiro | ✅ |
-| 3 | Linha de base, avanço físico e valor agregado (PV, EV, AC, SPI, CPI, EAC) | |
+| 3 | Linha de base, medições, boletim de medição e valor agregado (PV, EV, AC, SPI, CPI, EAC) | ✅ |
 | 4 | Persistência com EF Core e PostgreSQL, testes de integração com Testcontainers | |
 | 5 | API REST: JWT, autorização por política, multi-tenant, ProblemDetails, idempotência e concorrência otimista | |
 | 6 | Eventos de domínio, outbox e processamento em segundo plano | |
@@ -188,6 +241,15 @@ O projeto é construído em partes, cada uma entregue funcionando, testada e doc
 - **Cronograma físico-financeiro** mensal, por item e por etapa, pelas datas cedo ou tarde.
 - **Tudo fecha ao centavo:** a composição soma as parcelas, a etapa soma os itens, os meses somam o orçamento.
 
+**Parte 3 — linha de base, medição e valor agregado**
+
+- **Linha de base** congelada: quantidade, preço e custo de cada item, e o planejado de cada mês, a preço e a custo. Revisar o orçamento ou o cronograma depois não muda a régua.
+- **Medições mensais** por item: quantidade executada e custo real. O histórico só cresce, erro se corrige com glosa, e medir além do contratado é recusado.
+- **Boletim de medição** de cada item e etapa — anterior, no mês, acumulado e saldo —, com o valor do mês que se paga.
+- **Valor agregado** da obra, de cada etapa e de cada item: VP, VA, CR, variações de prazo e custo, IDP, IDC, três estimativas no término, EPT, VNT e IDPT.
+- **Prazo agregado** (earned schedule): o atraso em meses e a duração estimada da obra.
+- **Curvas S** de valor planejado, valor agregado e custo real, mês a mês.
+
 ## Decisões
 
 As decisões que mudam o desenho do sistema estão registradas em [`docs/adr`](docs/adr):
@@ -198,23 +260,27 @@ As decisões que mudam o desenho do sistema estão registradas em [`docs/adr`](d
 - [ADR-0004](docs/adr/0004-dinheiro-e-arredondamento.md) — dinheiro em `decimal`, e arredonda-se o que aparece na planilha, pela NBR 5891.
 - [ADR-0005](docs/adr/0005-orcamento-referencia-a-base-de-custos.md) — o orçamento aponta para a base de custos em vez de copiar preços; o BDI entra com as duas casas impressas.
 - [ADR-0006](docs/adr/0006-fisico-financeiro-derivado-do-cronograma.md) — o físico-financeiro é calculado do cronograma, e os centavos se rateiam pelo maior resto.
+- [ADR-0007](docs/adr/0007-linha-de-base-congelada.md) — a linha de base é uma cópia congelada do plano, a preço e a custo, sem referência a nada vivo.
+- [ADR-0008](docs/adr/0008-medicao-historico-que-so-cresce.md) — a medição é um histórico que só cresce, e o valor do mês é a diferença entre acumulados.
+- [ADR-0009](docs/adr/0009-valor-agregado-a-custo-e-prazo-agregado.md) — valor agregado a custo, estimativas a partir dos valores, e prazo agregado em meses.
 
 E algumas que não precisaram de ADR:
 
 - **O domínio não depende de nada** além da biblioteca padrão do .NET. Um teste de arquitetura falha se ele passar a referenciar qualquer outro assembly.
-- **Cálculos são serviços sem estado**, e não métodos dos agregados. Caminho crítico, custo, planilha e físico-financeiro são derivados — fotografias —, e não estado a manter sincronizado.
+- **Cálculos são serviços sem estado**, e não métodos dos agregados. Caminho crítico, custo, planilha, físico-financeiro, boletim e valor agregado são derivados — fotografias —, e não estado a manter sincronizado.
 - **Objetos de valor são `record` de classe, selados e só com `get`:** nem o `with` nem o `default` produzem um código de atividade inválido. A exceção é `Dinheiro`, um `record struct` — para ele, o `default` é zero real, um valor legítimo.
 - **Erros de quem usa vêm todos de uma vez.** Os códigos que faltam na base, os itens sem atividade: uma mensagem com a lista, e não uma rodada de corrigir e recalcular para cada um.
 - **Aviso é erro.** Analisadores no nível `latest-recommended`, estilo verificado no build e `dotnet format` conferido no CI.
 
 ## Testes
 
-- **Exemplos calculados à mão.** Cada número esperado foi obtido no papel: a obra acima, os quatro tipos de vínculo, folga livre menor que a total, marcos, composições com auxiliares, a fórmula do BDI, a planilha inteira, o físico-financeiro atravessando feriado e virada de mês.
-- **Propriedades em 400 casos sorteados**, com sementes fixas, em quatro frentes:
+- **Exemplos calculados à mão.** Cada número esperado foi obtido no papel: a obra acima, os quatro tipos de vínculo, folga livre menor que a total, marcos, composições com auxiliares, a fórmula do BDI, a planilha inteira, o físico-financeiro atravessando feriado e virada de mês, o boletim e o valor agregado de uma obra que termina um mês atrasada.
+- **Propriedades em 400 casos sorteados**, com sementes fixas, em cinco frentes:
   - **caminho crítico** — nenhum vínculo violado, nem no cedo nem no tarde; nenhuma folga sem motivo; folga livre entre zero e a total;
   - **datas** — toda data é dia útil dentro da obra; nenhum marco antes do que o empurra;
   - **planilha** — cada número se refaz à mão, refeito pelo teste com `decimal.Round`, sem usar o código que está conferindo;
   - **físico-financeiro** — fecha com o orçamento ao centavo, nas duas curvas, e põe cada real no mês em que o serviço acontece.
+  - **valor agregado** — com glosas, meses pulados e obras fora do prazo: cada valor refeito a partir dos lançamentos, as etapas somando os itens, e o prazo agregado contando a mesma história do valor agregado.
 - **Arquitetura.** O domínio só referencia a biblioteca padrão; toda classe pública é selada, estática ou abstrata; nenhuma propriedade tem `set` público — o estado só muda pelos métodos do domínio.
 
 ## Como rodar
@@ -235,6 +301,9 @@ src/PlanejamentoObras.Dominio/               regras do negócio, sem dependênci
   Custos/                                    insumos, composições e custo unitário
   Orcamentos/                                EAP, BDI, planilha e curva ABC
   FisicoFinanceiro/                          o orçamento distribuído nos meses
+  LinhasDeBase/                              o plano aprovado, congelado
+  Medicoes/                                  medições mensais e boletim de medição
+  ValorAgregado/                             desempenho de prazo e custo contra a linha de base
 tests/PlanejamentoObras.Dominio.Testes/      exemplos, propriedades e o exemplo deste README
 tests/PlanejamentoObras.Arquitetura.Testes/  regras que o domínio não pode quebrar
 docs/adr/                                    decisões de arquitetura
