@@ -1,3 +1,4 @@
+using PlanejamentoObras.Dominio.Calendarios;
 using PlanejamentoObras.Dominio.Comum;
 
 namespace PlanejamentoObras.Dominio.Cronogramas;
@@ -15,6 +16,7 @@ public sealed class CronogramaProgramado
 
     internal CronogramaProgramado(
         string nome,
+        CalendarioDeTrabalho calendario,
         DateOnly dataDeInicio,
         DateOnly dataDeTermino,
         int duracaoEmDiasUteis,
@@ -22,6 +24,7 @@ public sealed class CronogramaProgramado
         IReadOnlyList<Dependencia> dependenciasCriticas)
     {
         Nome = nome;
+        Calendario = calendario;
         DataDeInicio = dataDeInicio;
         DataDeTermino = dataDeTermino;
         DuracaoEmDiasUteis = duracaoEmDiasUteis;
@@ -32,6 +35,13 @@ public sealed class CronogramaProgramado
     }
 
     public string Nome { get; }
+
+    /// <summary>
+    /// O calendário em que as datas foram calculadas. Quem precisa dos dias de
+    /// trabalho de uma atividade — o físico-financeiro — usa este, e não um
+    /// outro que poderia discordar das datas.
+    /// </summary>
+    public CalendarioDeTrabalho Calendario { get; }
 
     /// <summary>O primeiro dia útil da obra — que não é necessariamente a data pedida, se ela cair num fim de semana.</summary>
     public DateOnly DataDeInicio { get; }

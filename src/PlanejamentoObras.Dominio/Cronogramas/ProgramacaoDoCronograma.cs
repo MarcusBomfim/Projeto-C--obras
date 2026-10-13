@@ -38,6 +38,7 @@ public static class ProgramacaoDoCronograma
 
         return new CronogramaProgramado(
             cronograma.Nome,
+            calendario,
             dias[0],
             dias[^1],
             analise.DuracaoEmDiasUteis,

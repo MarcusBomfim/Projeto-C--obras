@@ -226,6 +226,14 @@ public sealed class ProgramacaoDoCronogramaTests
     }
 
     [Fact]
+    public void Guarda_o_calendario_em_que_foi_programado()
+    {
+        // Quem precisar dos dias de trabalho de uma atividade usa este, e não
+        // outro que discordaria das datas.
+        Assert.Same(Calendario, Programar(Canteiro()).Calendario);
+    }
+
+    [Fact]
     public void Acusa_atividade_que_nao_esta_no_cronograma_programado()
     {
         Assert.Throws<ExcecaoDeDominio>(() => Programar(Canteiro()).Da("XYZ"));
