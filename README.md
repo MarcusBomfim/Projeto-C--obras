@@ -4,7 +4,7 @@
 
 Planejamento e controle de obra como o engenheiro de planejamento faz: rede de precedências e caminho crítico, orçamento com composições de custo e BDI, o cronograma físico-financeiro que junta os dois — e a obra medida mês a mês contra o plano aprovado, com boletim de medição e valor agregado.
 
-C# 14 · .NET 10 · EF Core 10 · PostgreSQL 17 · Testcontainers · xUnit v3 · GitHub Actions
+C# 14 · .NET 10 · ASP.NET Core 10 · EF Core 10 · PostgreSQL 17 · Testcontainers · xUnit v3 · GitHub Actions
 
 ## O problema
 
@@ -211,16 +211,71 @@ O prazo agregado mede o atraso em meses. Ao contrário do IDP clássico, ele nã
 Cada agregado é gravado inteiro, como um documento `jsonb` numa tabela própria do PostgreSQL, e volta pelas mesmas regras da escrita: um cronograma com ciclo, editado à mão no banco, é recusado na leitura com o id e o motivo ([ADR-0010](docs/adr/0010-identidade-e-reconstituicao-dos-agregados.md), [ADR-0011](docs/adr/0011-agregados-gravados-como-documentos-jsonb.md)).
 
 ```csharp
-servicos.AdicionarPersistencia(conexao);                  // contexto e repositórios, um por requisição
+servicos.AdicionarPersistencia<EmpresaDoUsuario>(conexao); // contexto e repositórios, um por requisição
 
-await cronogramas.Adicionar(cronograma);                  // versão 1
+await cronogramas.Adicionar(cronograma);                   // versão 1
 
-var lido = await cronogramas.Obter(cronograma.Id);        // o agregado e a versão lida
+var lido = await cronogramas.Obter(cronograma.Id);         // o agregado e a versão lida
 lido!.Agregado.AlterarDuracaoDaAtividade("FUN", 12);
-await cronogramas.Atualizar(lido.Agregado, lido.Versao);  // versão 2
+await cronogramas.Atualizar(lido.Agregado, lido.Versao);   // versão 2
 ```
 
 Se outra pessoa gravou o mesmo cronograma entre a leitura e a gravação, a gravação é recusada com `ConflitoDeConcorrencia`: "O cronograma … mudou desde a versão 1: está na versão 2. Leia de novo e refaça a alteração." A versão é conferida dentro do próprio `update`: dez gravações simultâneas a partir da mesma versão, e passa exatamente uma ([ADR-0012](docs/adr/0012-concorrencia-otimista-com-versao-explicita.md)).
+
+Cada construtora só enxerga o que é dela: toda consulta sai filtrada pela empresa, e o PostgreSQL confere de novo, com segurança por linha — uma consulta que escape do filtro do código continua sem ver o que é de outra empresa ([ADR-0013](docs/adr/0013-isolamento-por-empresa-no-codigo-e-no-banco.md)).
+
+### Pela API
+
+A mesma obra, pela API REST. Cada pedido leva um JWT do provedor de identidade, com a empresa e os papéis de quem pede — a empresa nunca vem na URL. Criar exige uma chave de idempotência:
+
+```http
+POST /api/cronogramas
+Authorization: Bearer eyJhbGciOi…
+Idempotency-Key: 6f1c2a54-9b1e-4f07-8d4c-2c4e5a0b7d13
+Content-Type: application/json
+
+{ "nome": "Residencial Vista Serra", "atividades": [ … ], "dependencias": [ … ] }
+```
+
+```http
+HTTP/1.1 201 Created
+Location: /api/cronogramas/0199e3b4-…
+ETag: "1"
+```
+
+Repetida com a mesma chave — a resposta se perdeu, o cliente tentou de novo —, a criação devolve a mesma resposta, com `Idempotent-Replayed: true`, e não cria um segundo cronograma ([ADR-0014](docs/adr/0014-idempotencia-na-mesma-transacao-da-criacao.md)). Toda alteração leva a versão que leu:
+
+```http
+PATCH /api/cronogramas/0199e3b4-…/atividades/EST
+If-Match: "1"
+
+{ "duracaoEmDiasUteis": 25 }
+```
+
+Se outra pessoa alterou o cronograma no meio, a resposta é 412 — e todo erro sai em ProblemDetails, com um tipo que aponta para a [explicação](docs/api/problemas.md):
+
+```json
+{
+  "type": "https://github.com/MarcusBomfim/Projeto-C--obras/blob/main/docs/api/problemas.md#versao-desatualizada",
+  "title": "A versão informada não é mais a atual.",
+  "status": 412,
+  "detail": "O cronograma 0199e3b4-… mudou desde a versão 1: está na versão 2. Leia de novo e refaça a alteração.",
+  "versaoAtual": 2,
+  "traceId": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+}
+```
+
+Cada recurso tem o papel que o altera; ler é de qualquer pessoa da empresa ([ADR-0015](docs/adr/0015-contrato-http.md)):
+
+| Recurso | Quem altera | O que se calcula |
+|---|---|---|
+| `/api/cronogramas` | `planejador` | caminho crítico, programação no calendário |
+| `/api/bases-de-custos` | `orcamentista` | composição aberta |
+| `/api/orcamentos` | `orcamentista` | planilha, curva ABC e físico-financeiro, contra a base escolhida |
+| `/api/linhas-de-base` | `gestor` | — o plano aprovado não muda |
+| `/api/acompanhamentos` | `engenheiro` | medições, boletim e valor agregado |
+
+O exemplo desta página inteiro — da base de custos ao valor agregado — roda pela API num teste, cada passo pelo papel que cuida dele: [`ExemploDoReadmePelaApiTests`](tests/PlanejamentoObras.Api.Testes/ExemploDoReadmePelaApiTests.cs).
 
 ## Roteiro
 
@@ -232,7 +287,7 @@ O projeto é construído em partes, cada uma entregue funcionando, testada e doc
 | 2 | Base de custos e composições, orçamento com EAP e BDI, cronograma físico-financeiro | ✅ |
 | 3 | Linha de base, medições, boletim de medição e valor agregado (PV, EV, AC, SPI, CPI, EAC) | ✅ |
 | 4 | Persistência com EF Core e PostgreSQL, testes de integração com Testcontainers | ✅ |
-| 5 | API REST: JWT, autorização por política, multi-tenant, ProblemDetails, idempotência e concorrência otimista | |
+| 5 | API REST: JWT, autorização por política, multi-tenant, ProblemDetails, idempotência e concorrência otimista | ✅ |
 | 6 | Eventos de domínio, outbox e processamento em segundo plano | |
 | 7 | Front-end em React: Gantt com caminho crítico, curva S e painel de valor agregado | |
 | 8 | Observabilidade com OpenTelemetry, Docker e entrega contínua | |
@@ -276,6 +331,17 @@ O projeto é construído em partes, cada uma entregue funcionando, testada e doc
 - **Exceções com nome** para o que o banco responde: conflito, não encontrado, já existe, em uso, documento inválido.
 - **Migrações do EF Core** no repositório, com o `dotnet-ef` fixado como ferramenta local.
 
+**Parte 5 — API**
+
+- **API REST** com os cinco agregados como recursos: alteração pelo nome do que se faz — adicionar uma atividade, vincular um item, registrar uma medição —, e os cálculos como leituras: caminho crítico, programação, planilha, curva ABC, físico-financeiro, boletim e valor agregado.
+- **Autenticação por JWT** de um provedor de identidade — em desenvolvimento, o `dotnet user-jwts` —, e **autorização por política**: cada endpoint declara o que exige, cada política diz o papel que a satisfaz.
+- **Multiempresa** com a empresa vinda do token, um filtro em toda consulta e **segurança por linha no PostgreSQL**; a referência entre agregados não atravessa empresas, e o agregado de outra empresa responde 404.
+- **Concorrência otimista pelo HTTP:** a versão na ETag; `If-Match` obrigatório em toda alteração — 428 sem ele, 412 com uma versão velha —; `If-None-Match` dá 304.
+- **Idempotência na criação:** `Idempotency-Key` obrigatória, reservada na mesma transação que grava o agregado; a repetição devolve a resposta original, e repetições simultâneas criam um só.
+- **Erros em ProblemDetails** (RFC 9457), de um catálogo documentado, em português, com o `traceId`; erro interno não vaza o detalhe.
+- **JSON estrito na entrada:** campo que falta, campo a mais, nulo onde não cabe e enum em número dão 400, dizendo qual.
+- **Documento OpenAPI** com o esquema de autenticação e os cabeçalhos que cada endpoint exige.
+
 ## Decisões
 
 As decisões que mudam o desenho do sistema estão registradas em [`docs/adr`](docs/adr):
@@ -292,6 +358,9 @@ As decisões que mudam o desenho do sistema estão registradas em [`docs/adr`](d
 - [ADR-0010](docs/adr/0010-identidade-e-reconstituicao-dos-agregados.md) — cada agregado tem identidade do seu tipo, e a leitura do banco passa pelas regras; o que foi aprovado volta como foi aprovado.
 - [ADR-0011](docs/adr/0011-agregados-gravados-como-documentos-jsonb.md) — cada agregado é um documento `jsonb`, lido de forma estrita e com formato numerado; os testes usam PostgreSQL de verdade.
 - [ADR-0012](docs/adr/0012-concorrencia-otimista-com-versao-explicita.md) — concorrência otimista com versão explícita, conferida pelo banco num comando só.
+- [ADR-0013](docs/adr/0013-isolamento-por-empresa-no-codigo-e-no-banco.md) — cada empresa só enxerga o que é dela: filtro no código e segurança por linha no banco, cada um testado sem o outro.
+- [ADR-0014](docs/adr/0014-idempotencia-na-mesma-transacao-da-criacao.md) — criação com chave de idempotência, reservada na mesma transação que grava o agregado; o banco põe os repetidos em fila.
+- [ADR-0015](docs/adr/0015-contrato-http.md) — o contrato HTTP: token com a empresa, política por papel, versão na ETag, erro em ProblemDetails.
 
 E algumas que não precisaram de ADR:
 
@@ -312,6 +381,13 @@ E algumas que não precisaram de ADR:
   - **valor agregado** — com glosas, meses pulados e obras fora do prazo: cada valor refeito a partir dos lançamentos, as etapas somando os itens, e o prazo agregado contando a mesma história do valor agregado.
 - **Persistência contra PostgreSQL de verdade**, num contêiner do Testcontainers: o esquema que as migrações criam e as restrições que o banco garante; obras sorteadas que vão ao `jsonb` e voltam calculando o mesmo; a versão que recusa quem grava por cima — dez gravações simultâneas, e passa uma —; e um documento estragado à mão no banco, recusado na leitura. Sem Docker, esses testes são pulados, com o motivo; no CI, falham.
 - **O formato do que se grava.** O JSON de cada agregado é comparado com o formato esperado; a leitura estrita recusa campo a mais, campo a menos, nulo, enum desconhecido, tipo de nó desconhecido e documento de outra versão; 400 obras sorteadas fazem ida e volta pelo documento. E um teste sem banco falha se o modelo do EF Core mudar sem migração.
+- **Isolamento entre empresas**, provado em cada camada sem a outra: o filtro do código com o banco conectado como superusuário, e a segurança por linha com o filtro desligado, com SQL à mão e com a conexão reaproveitada do pool.
+- **A API inteira, em memória, contra o PostgreSQL dos testes**, com tokens emitidos pelo próprio teste:
+  - **o contrato de todo endpoint**, percorrendo os que a API mapeou — os de hoje e os que vierem: nenhum sem política, nenhuma alteração sem `If-Match`, nenhuma criação sem `Idempotency-Key`, e o documento OpenAPI descrevendo tudo isso;
+  - **autenticação e autorização** — token de outra chave, vencido, de outro emissor, sem empresa — e o papel de cada recurso;
+  - **concorrência e idempotência pelo HTTP**, com dez pedidos simultâneos: na alteração, passa um; na criação, cria-se um;
+  - **os erros em ProblemDetails**, do 400 ao 428, e o erro interno que não diz nada além do `traceId`;
+  - **o exemplo deste README**, de ponta a ponta, sem mudar um centavo.
 - **Arquitetura.** O domínio só referencia a biblioteca padrão; toda classe pública é selada, estática ou abstrata; nenhuma propriedade tem `set` público — o estado só muda pelos métodos do domínio; todo agregado tem identidade própria; e só a infraestrutura e os testes do domínio enxergam os internos dele.
 
 ## Como rodar
@@ -332,6 +408,15 @@ dotnet tool restore
 dotnet ef database update --project src/PlanejamentoObras.Infraestrutura --connection "Host=localhost;Database=planejamento_obras;Username=postgres;Password=postgres"
 ```
 
+Para subir a API em `http://localhost:5080` — o documento OpenAPI fica em `/openapi/v1.json` — e gerar um token de desenvolvimento, com a empresa e o papel que quiser:
+
+```bash
+dotnet run --project src/PlanejamentoObras.Api
+dotnet user-jwts create --project src/PlanejamentoObras.Api --role planejador --claim empresa=0199e3b4-0000-7000-8000-000000000001
+```
+
+Em desenvolvimento, a API conecta como `postgres`, um superusuário, que passa por cima da segurança por linha — o filtro do código continua isolando as empresas. Em produção, ela conecta com um papel comum, que a segurança por linha alcança ([ADR-0013](docs/adr/0013-isolamento-por-empresa-no-codigo-e-no-banco.md)).
+
 ## Estrutura
 
 ```text
@@ -347,9 +432,16 @@ src/PlanejamentoObras.Dominio/                  regras do negócio, sem dependê
   ValorAgregado/                                desempenho de prazo e custo contra a linha de base
 src/PlanejamentoObras.Infraestrutura/           persistência no PostgreSQL
   Documentos/                                   os agregados em JSON, e de volta
-  Persistencia/                                 contexto, migrações, repositórios e concorrência
+  Persistencia/                                 contexto, migrações, repositórios, empresa e idempotência
+src/PlanejamentoObras.Api/                      a API REST
+  Hospedagem/                                   serviços, pipeline e documento OpenAPI
+  Http/                                         ETag e If-Match, idempotência, ProblemDetails
+  Seguranca/                                    JWT, papéis, políticas e a empresa do token
+  Recursos/                                     um recurso por agregado, e as representações
 tests/PlanejamentoObras.Dominio.Testes/         exemplos, propriedades e o exemplo deste README
 tests/PlanejamentoObras.Infraestrutura.Testes/  documentos e repositórios, contra PostgreSQL de verdade
+tests/PlanejamentoObras.Api.Testes/             a API em memória, contra PostgreSQL de verdade
 tests/PlanejamentoObras.Arquitetura.Testes/     regras que o domínio não pode quebrar
 docs/adr/                                       decisões de arquitetura
+docs/api/                                       o catálogo de problemas da API
 ```
