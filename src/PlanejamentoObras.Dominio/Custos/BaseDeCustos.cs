@@ -30,10 +30,20 @@ public sealed class BaseDeCustos
     private readonly OrderedDictionary<CodigoDeCusto, Composicao> _composicoes = [];
 
     public BaseDeCustos(string nome, DateOnly dataBase)
+        : this(BaseDeCustosId.Novo(), nome, dataBase)
     {
+    }
+
+    private BaseDeCustos(BaseDeCustosId id, string nome, DateOnly dataBase)
+    {
+        ArgumentNullException.ThrowIfNull(id);
+
+        Id = id;
         Nome = ValidarNome(nome);
         DataBase = dataBase;
     }
+
+    public BaseDeCustosId Id { get; }
 
     public string Nome { get; private set; }
 
@@ -122,7 +132,60 @@ public sealed class BaseDeCustos
     /// <summary>
     /// Inclui um insumo, ou outra composição, na composição.
     /// </summary>
-    public void AdicionarItem(string composicao, string item, decimal coeficiente)
+    public void AdicionarItem(string composicao, string item, decimal coeficiente) =>
+        IncluirItem(composicao, item, coeficiente, conferirCiclo: true);
+
+    public void AlterarCoeficiente(string composicao, string item, decimal coeficiente) =>
+        LocalizarComposicao(new CodigoDeCusto(composicao)).AlterarCoeficiente(new CodigoDeCusto(item), coeficiente);
+
+    public void RemoverItem(string composicao, string item) =>
+        LocalizarComposicao(new CodigoDeCusto(composicao)).RemoverItem(new CodigoDeCusto(item));
+
+    /// <summary>
+    /// Refaz uma base gravada: a mesma identidade, os mesmos insumos e
+    /// composições, na mesma ordem.
+    /// </summary>
+    /// <remarks>
+    /// Para a persistência, e só para ela (ADR-0010). Primeiro entram todos os
+    /// insumos e todas as composições, depois os itens: uma composição pode
+    /// usar outra cadastrada depois dela. Cada item passa pelas regras de
+    /// sempre, e a checagem de ciclo é uma só, no fim, para a base inteira.
+    /// </remarks>
+    internal static BaseDeCustos Reconstituir(
+        BaseDeCustosId id,
+        string nome,
+        DateOnly dataBase,
+        IEnumerable<(string Codigo, string Descricao, string Unidade, TipoDeInsumo Tipo, decimal Preco)> insumos,
+        IEnumerable<(string Codigo, string Descricao, string Unidade, IEnumerable<(string Codigo, decimal Coeficiente)> Itens)> composicoes)
+    {
+        var baseDeCustos = new BaseDeCustos(id, nome, dataBase);
+
+        foreach (var (codigo, descricao, unidade, tipo, preco) in insumos)
+        {
+            baseDeCustos.AdicionarInsumo(codigo, descricao, unidade, tipo, preco);
+        }
+
+        var lidas = composicoes.ToList();
+
+        foreach (var (codigo, descricao, unidade, _) in lidas)
+        {
+            baseDeCustos.AdicionarComposicao(codigo, descricao, unidade);
+        }
+
+        foreach (var (codigo, _, _, itens) in lidas)
+        {
+            foreach (var (item, coeficiente) in itens)
+            {
+                baseDeCustos.IncluirItem(codigo, item, coeficiente, conferirCiclo: false);
+            }
+        }
+
+        baseDeCustos.ConferirQueNaoHaCiclo();
+
+        return baseDeCustos;
+    }
+
+    private void IncluirItem(string composicao, string item, decimal coeficiente, bool conferirCiclo)
     {
         var alvo = LocalizarComposicao(new CodigoDeCusto(composicao));
         var chave = new CodigoDeCusto(item);
@@ -149,9 +212,7 @@ public sealed class BaseDeCustos
          * usa `alvo`, direta ou indiretamente. Como no cronograma, a busca
          * devolve o caminho, para a mensagem mostrar o ciclo inteiro.
          */
-        var caminho = CaminhoEntre(chave, alvo.Codigo);
-
-        if (caminho is not null)
+        if (conferirCiclo && CaminhoEntre(chave, alvo.Codigo) is { } caminho)
         {
             var ciclo = alvo.Codigo + " → " + string.Join(" → ", caminho.Select(codigo => codigo.Valor));
 
@@ -163,11 +224,48 @@ public sealed class BaseDeCustos
         alvo.AdicionarItem(new ItemDaComposicao(chave, coeficiente));
     }
 
-    public void AlterarCoeficiente(string composicao, string item, decimal coeficiente) =>
-        LocalizarComposicao(new CodigoDeCusto(composicao)).AlterarCoeficiente(new CodigoDeCusto(item), coeficiente);
+    /// <summary>
+    /// A checagem de ciclo da base inteira, de uma vez: o algoritmo de Kahn
+    /// sobre as composições e as auxiliares que cada uma usa.
+    /// </summary>
+    private void ConferirQueNaoHaCiclo()
+    {
+        var pendentes = _composicoes.Keys.ToDictionary(codigo => codigo, _ => 0);
 
-    public void RemoverItem(string composicao, string item) =>
-        LocalizarComposicao(new CodigoDeCusto(composicao)).RemoverItem(new CodigoDeCusto(item));
+        foreach (var composicao in _composicoes.Values)
+        {
+            foreach (var item in composicao.Itens.Where(item => _composicoes.ContainsKey(item.Codigo)))
+            {
+                pendentes[item.Codigo]++;
+            }
+        }
+
+        // Começa pelas que nenhuma outra usa e desce pelas auxiliares.
+        var prontas = new Queue<CodigoDeCusto>(pendentes.Where(par => par.Value == 0).Select(par => par.Key));
+        var ordenadas = 0;
+
+        while (prontas.TryDequeue(out var codigo))
+        {
+            ordenadas++;
+
+            foreach (var item in _composicoes[codigo].Itens.Where(item => _composicoes.ContainsKey(item.Codigo)))
+            {
+                if (--pendentes[item.Codigo] == 0)
+                {
+                    prontas.Enqueue(item.Codigo);
+                }
+            }
+        }
+
+        if (ordenadas < _composicoes.Count)
+        {
+            var presas = pendentes.Where(par => par.Value > 0).Select(par => par.Key.Valor).Order(StringComparer.Ordinal);
+
+            throw new ExcecaoDeDominio(
+                $"A base {Nome} tem composições que usam a si mesmas: {string.Join(", ", presas)} "
+                + "estão num laço ou abaixo dele.");
+        }
+    }
 
     // ------------------------------------------------- para o cálculo
 

@@ -269,6 +269,21 @@ public sealed class CronogramaTests
     }
 
     [Fact]
+    public void Atividade_removida_e_cadastrada_de_novo_aceita_os_vinculos_de_novo()
+    {
+        // Os vínculos saem junto com a atividade — inclusive do controle de
+        // pares repetidos.
+        var cronograma = ComTresAtividades();
+        cronograma.AdicionarDependencia("FUN", "EST");
+        cronograma.RemoverAtividade("EST");
+        cronograma.AdicionarAtividade("EST", "Estrutura", 20);
+
+        cronograma.AdicionarDependencia("FUN", "EST");
+
+        Assert.Equal("FUN → EST (TI)", Assert.Single(cronograma.Dependencias).ToString());
+    }
+
+    [Fact]
     public void Remove_um_vinculo()
     {
         var cronograma = ComTresAtividades();

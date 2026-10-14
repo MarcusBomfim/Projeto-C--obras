@@ -32,6 +32,7 @@ public sealed class LinhaDeBase
     private readonly List<LinhaPlanejada> _primeiroNivel;
 
     private LinhaDeBase(
+        LinhaDeBaseId id,
         string nome,
         DateOnly aprovadaEm,
         DatasDoCronograma datas,
@@ -42,6 +43,7 @@ public sealed class LinhaDeBase
         Dinheiro total,
         Dinheiro custoTotal)
     {
+        Id = id;
         Nome = nome;
         AprovadaEm = aprovadaEm;
         Datas = datas;
@@ -55,6 +57,8 @@ public sealed class LinhaDeBase
         _porNumero = Linhas.ToDictionary(linha => linha.Numero);
         _primeiroNivel = [.. Linhas.Where(linha => linha.Nivel == 1)];
     }
+
+    public LinhaDeBaseId Id { get; }
 
     /// <summary>"Linha de base 1 — contrato assinado".</summary>
     public string Nome { get; }
@@ -118,6 +122,7 @@ public sealed class LinhaDeBase
         });
 
         return new LinhaDeBase(
+            LinhaDeBaseId.Novo(),
             nomeValido,
             aprovadaEm,
             datas,
@@ -127,6 +132,85 @@ public sealed class LinhaDeBase
             linhas,
             orcamento.Total,
             orcamento.CustoDireto);
+    }
+
+    /// <summary>
+    /// Refaz uma linha de base gravada, com os valores exatamente como foram
+    /// gravados — nada é recalculado.
+    /// </summary>
+    /// <remarks>
+    /// Para a persistência, e só para ela (ADR-0010). Como a linha de base
+    /// não tem regra de escrita a reaplicar — ela nasce pronta —, o que se
+    /// confere é a coerência do que veio gravado: meses em sequência, um
+    /// valor por mês em cada linha, os meses somando o total da linha e as
+    /// linhas de primeiro nível somando o da obra. Gravação corrompida é
+    /// recusada na leitura, e não descoberta num relatório errado.
+    /// </remarks>
+    internal static LinhaDeBase Reconstituir(
+        LinhaDeBaseId id,
+        string nome,
+        DateOnly aprovadaEm,
+        DatasDoCronograma datas,
+        DateOnly inicioPlanejado,
+        DateOnly terminoPlanejado,
+        IReadOnlyList<DateOnly> meses,
+        IReadOnlyList<LinhaPlanejada> linhas,
+        Dinheiro total,
+        Dinheiro custoTotal)
+    {
+        ArgumentNullException.ThrowIfNull(id);
+        ArgumentNullException.ThrowIfNull(meses);
+        ArgumentNullException.ThrowIfNull(linhas);
+
+        var nomeValido = ValidarNome(nome);
+        var problemas = new List<string>();
+
+        if (!Enum.IsDefined(datas))
+        {
+            problemas.Add("as datas do cronograma não são nem cedo nem tarde");
+        }
+
+        if (meses.Count == 0 || meses[0].Day != 1 || meses.Skip(1).Where((mes, i) => mes != meses[i].AddMonths(1)).Any())
+        {
+            problemas.Add("os meses não são uma sequência de primeiros dias de mês consecutivos");
+        }
+
+        if (!linhas.OfType<ItemPlanejado>().Any())
+        {
+            problemas.Add("não há item");
+        }
+
+        foreach (var repetido in linhas.GroupBy(linha => linha.Numero).Where(grupo => grupo.Count() > 1))
+        {
+            problemas.Add($"a linha {repetido.Key} aparece mais de uma vez");
+        }
+
+        foreach (var linha in linhas)
+        {
+            if (linha.ValoresPlanejados.Count != meses.Count || linha.CustosPlanejados.Count != meses.Count)
+            {
+                problemas.Add($"a linha {linha.Numero} não tem um valor para cada um dos {meses.Count} meses");
+            }
+            else if (Somar(linha.ValoresPlanejados) != linha.Total || Somar(linha.CustosPlanejados) != linha.CustoTotal)
+            {
+                problemas.Add($"os meses da linha {linha.Numero} não somam o total dela");
+            }
+        }
+
+        var primeiroNivel = linhas.Where(linha => linha.Nivel == 1).ToList();
+
+        if (Somar(primeiroNivel.Select(linha => linha.Total)) != total
+            || Somar(primeiroNivel.Select(linha => linha.CustoTotal)) != custoTotal)
+        {
+            problemas.Add("as etapas de primeiro nível não somam o total da obra");
+        }
+
+        if (problemas.Count > 0)
+        {
+            throw new ExcecaoDeDominio($"A linha de base {nomeValido} gravada não é coerente: {string.Join("; ", problemas)}.");
+        }
+
+        return new LinhaDeBase(id, nomeValido, aprovadaEm, datas, inicioPlanejado, terminoPlanejado, meses, linhas, total, custoTotal);
     }
 
     public LinhaPlanejada Linha(string numero)
@@ -168,6 +252,9 @@ public sealed class LinhaDeBase
 
         return porMes.Take(Meses.Count(planejado => planejado <= competencia)).Aggregate(Dinheiro.Zero, (soma, valor) => soma + valor);
     }
+
+    private static Dinheiro Somar(IEnumerable<Dinheiro> valores) =>
+        valores.Aggregate(Dinheiro.Zero, (soma, valor) => soma + valor);
 
     private static string ValidarNome(string nome)
     {

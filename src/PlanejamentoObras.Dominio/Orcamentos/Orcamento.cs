@@ -27,12 +27,26 @@ public sealed class Orcamento
     private readonly List<Etapa> _etapas = [];
 
     public Orcamento(string nome, Bdi bdi)
+        : this(OrcamentoId.Novo(), nome, bdi)
     {
+    }
+
+    /// <summary>
+    /// Um orçamento vazio com uma identidade já existente — o começo da
+    /// reconstituição de um orçamento gravado, que a persistência completa
+    /// pelos métodos de sempre (ADR-0010).
+    /// </summary>
+    internal Orcamento(OrcamentoId id, string nome, Bdi bdi)
+    {
+        ArgumentNullException.ThrowIfNull(id);
         ArgumentNullException.ThrowIfNull(bdi);
 
+        Id = id;
         Nome = ValidarNome(nome);
         Bdi = bdi;
     }
+
+    public OrcamentoId Id { get; }
 
     public string Nome { get; private set; }
 

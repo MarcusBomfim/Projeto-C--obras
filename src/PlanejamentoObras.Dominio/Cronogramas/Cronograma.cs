@@ -37,10 +37,23 @@ public sealed class Cronograma
 
     private readonly List<Dependencia> _dependencias = [];
 
+    // Os pares já ligados, para a checagem de vínculo repetido ser O(1).
+    private readonly HashSet<(CodigoDaAtividade De, CodigoDaAtividade Para)> _pares = [];
+
     public Cronograma(string nome)
+        : this(CronogramaId.Novo(), nome)
     {
+    }
+
+    private Cronograma(CronogramaId id, string nome)
+    {
+        ArgumentNullException.ThrowIfNull(id);
+
+        Id = id;
         Nome = ValidarNome(nome);
     }
+
+    public CronogramaId Id { get; }
 
     public string Nome { get; private set; }
 
@@ -99,6 +112,7 @@ public sealed class Cronograma
 
         _dependencias.RemoveAll(dependencia =>
             dependencia.Predecessora == atividade.Codigo || dependencia.Sucessora == atividade.Codigo);
+        _pares.RemoveWhere(par => par.De == atividade.Codigo || par.Para == atividade.Codigo);
 
         _atividades.Remove(atividade.Codigo);
     }
@@ -107,7 +121,69 @@ public sealed class Cronograma
         string predecessora,
         string sucessora,
         TipoDeDependencia tipo = TipoDeDependencia.TerminoInicio,
-        int defasagemEmDiasUteis = 0)
+        int defasagemEmDiasUteis = 0) =>
+        IncluirDependencia(predecessora, sucessora, tipo, defasagemEmDiasUteis, conferirCiclo: true);
+
+    public void RemoverDependencia(string predecessora, string sucessora)
+    {
+        var de = Localizar(predecessora).Codigo;
+        var para = Localizar(sucessora).Codigo;
+
+        if (!_pares.Remove((de, para)))
+        {
+            throw new ExcecaoDeDominio($"Não existe vínculo de {de} para {para}.");
+        }
+
+        _dependencias.RemoveAll(dependencia => dependencia.Predecessora == de && dependencia.Sucessora == para);
+    }
+
+    /// <summary>
+    /// Refaz um cronograma gravado: a mesma identidade, as mesmas atividades e
+    /// os mesmos vínculos, na mesma ordem.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Para a persistência, e só para ela (ADR-0010). Nada entra sem passar
+    /// pelas regras: código, descrição e duração de cada atividade, vínculo
+    /// para atividade que existe, sem repetição e sem laço.
+    /// </para>
+    /// <para>
+    /// A diferença para a escrita normal é a checagem de ciclo: em vez de uma
+    /// busca a cada vínculo — O(E × (V + E)) para a rede inteira —, uma
+    /// ordenação topológica só, no fim, em O(V + E). Para uma rede de três mil
+    /// vínculos, é a diferença entre ler o cronograma num instante e num par
+    /// de segundos.
+    /// </para>
+    /// </remarks>
+    internal static Cronograma Reconstituir(
+        CronogramaId id,
+        string nome,
+        IEnumerable<(string Codigo, string Descricao, int DuracaoEmDiasUteis)> atividades,
+        IEnumerable<(string Predecessora, string Sucessora, TipoDeDependencia Tipo, int DefasagemEmDiasUteis)> dependencias)
+    {
+        var cronograma = new Cronograma(id, nome);
+
+        foreach (var (codigo, descricao, duracao) in atividades)
+        {
+            cronograma.AdicionarAtividade(codigo, descricao, duracao);
+        }
+
+        foreach (var (predecessora, sucessora, tipo, defasagem) in dependencias)
+        {
+            cronograma.IncluirDependencia(predecessora, sucessora, tipo, defasagem, conferirCiclo: false);
+        }
+
+        cronograma.ConferirQueARedeNaoTemCiclo();
+
+        return cronograma;
+    }
+
+    private Dependencia IncluirDependencia(
+        string predecessora,
+        string sucessora,
+        TipoDeDependencia tipo,
+        int defasagemEmDiasUteis,
+        bool conferirCiclo)
     {
         var de = Localizar(predecessora).Codigo;
         var para = Localizar(sucessora).Codigo;
@@ -117,7 +193,7 @@ public sealed class Cronograma
             throw new ExcecaoDeDominio($"A atividade {de} não pode depender de si mesma.");
         }
 
-        if (_dependencias.Exists(dependencia => dependencia.Predecessora == de && dependencia.Sucessora == para))
+        if (_pares.Contains((de, para)))
         {
             throw new ExcecaoDeDominio(
                 $"Já existe um vínculo de {de} para {para}. Para mudar o tipo ou a defasagem, remova o atual e crie outro.");
@@ -130,9 +206,7 @@ public sealed class Cronograma
          * ciclo" sem dizer qual obriga o engenheiro a procurar à mão numa rede
          * de duzentas atividades.
          */
-        var caminho = CaminhoEntre(para, de);
-
-        if (caminho is not null)
+        if (conferirCiclo && CaminhoEntre(para, de) is { } caminho)
         {
             var ciclo = string.Join(" → ", caminho.Select(codigo => codigo.Valor)) + " → " + para;
 
@@ -143,21 +217,49 @@ public sealed class Cronograma
 
         var nova = new Dependencia(de, para, tipo, defasagemEmDiasUteis);
         _dependencias.Add(nova);
+        _pares.Add((de, para));
 
         return nova;
     }
 
-    public void RemoverDependencia(string predecessora, string sucessora)
+    /// <summary>
+    /// A checagem de ciclo da rede inteira, de uma vez: o algoritmo de Kahn.
+    /// Se sobrar atividade que nunca ficou sem predecessora pendente, há ciclo.
+    /// </summary>
+    private void ConferirQueARedeNaoTemCiclo()
     {
-        var de = Localizar(predecessora).Codigo;
-        var para = Localizar(sucessora).Codigo;
+        var pendentes = _atividades.Keys.ToDictionary(codigo => codigo, _ => 0);
+        var sucessoras = _atividades.Keys.ToDictionary(codigo => codigo, _ => new List<CodigoDaAtividade>());
 
-        var removidas = _dependencias.RemoveAll(dependencia =>
-            dependencia.Predecessora == de && dependencia.Sucessora == para);
-
-        if (removidas == 0)
+        foreach (var dependencia in _dependencias)
         {
-            throw new ExcecaoDeDominio($"Não existe vínculo de {de} para {para}.");
+            pendentes[dependencia.Sucessora]++;
+            sucessoras[dependencia.Predecessora].Add(dependencia.Sucessora);
+        }
+
+        var prontas = new Queue<CodigoDaAtividade>(pendentes.Where(par => par.Value == 0).Select(par => par.Key));
+        var ordenadas = 0;
+
+        while (prontas.TryDequeue(out var codigo))
+        {
+            ordenadas++;
+
+            foreach (var sucessora in sucessoras[codigo])
+            {
+                if (--pendentes[sucessora] == 0)
+                {
+                    prontas.Enqueue(sucessora);
+                }
+            }
+        }
+
+        if (ordenadas < _atividades.Count)
+        {
+            var presas = pendentes.Where(par => par.Value > 0).Select(par => par.Key.Valor).Order(StringComparer.Ordinal);
+
+            throw new ExcecaoDeDominio(
+                $"A rede do cronograma {Nome} tem um ciclo: as atividades {string.Join(", ", presas)} "
+                + "estão num laço ou depois dele.");
         }
     }
 

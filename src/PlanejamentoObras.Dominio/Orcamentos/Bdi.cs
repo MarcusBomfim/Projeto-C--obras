@@ -48,6 +48,18 @@ public sealed record Bdi
     }
 
     /// <summary>
+    /// Refaz um BDI gravado exatamente como foi gravado: o percentual e, se
+    /// houver, as parcelas — sem recalcular a fórmula.
+    /// </summary>
+    /// <remarks>
+    /// O percentual gravado é o que foi aprovado e foi para a planilha. Se um
+    /// dia a regra de arredondamento mudar, recalcular na leitura mudaria em
+    /// silêncio o preço de um orçamento já fechado (ADR-0010).
+    /// </remarks>
+    internal static Bdi Reconstituir(decimal percentual, ParcelasDoBdi? parcelas) =>
+        new(Informado(percentual).Percentual, parcelas);
+
+    /// <summary>
     /// O BDI calculado pela fórmula do Acórdão 2.622/2013 do TCU:
     /// <c>BDI = (1 + AC + S + R + G) × (1 + DF) × (1 + L) / (1 − I) − 1</c>.
     /// </summary>

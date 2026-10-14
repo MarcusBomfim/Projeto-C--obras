@@ -1,6 +1,12 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using PlanejamentoObras.Dominio;
+using PlanejamentoObras.Dominio.Comum;
+using PlanejamentoObras.Dominio.Cronogramas;
+using PlanejamentoObras.Dominio.Custos;
+using PlanejamentoObras.Dominio.LinhasDeBase;
+using PlanejamentoObras.Dominio.Medicoes;
+using PlanejamentoObras.Dominio.Orcamentos;
 
 namespace PlanejamentoObras.Arquitetura.Testes;
 
@@ -76,6 +82,49 @@ public sealed class RegrasDoDominioTests
             .ToArray();
 
         Assert.Empty(comSetterPublico);
+    }
+
+    [Fact]
+    public void So_a_infraestrutura_e_os_testes_enxergam_os_internos_do_dominio()
+    {
+        /*
+         * Os internos do domínio incluem a reconstituição dos agregados — o
+         * caminho pelo qual a persistência refaz um cronograma gravado. Se a
+         * API web pudesse usá-lo, teria um jeito de criar agregados por fora
+         * da porta da frente. A lista é fechada, e a mudança dela passa por
+         * este teste.
+         */
+        var visiveisPara = Dominio
+            .GetCustomAttributes<InternalsVisibleToAttribute>()
+            .Select(atributo => atributo.AssemblyName)
+            .Order(StringComparer.Ordinal);
+
+        Assert.Equal(["PlanejamentoObras.Dominio.Testes", "PlanejamentoObras.Infraestrutura"], visiveisPara);
+    }
+
+    [Fact]
+    public void Todo_agregado_tem_identidade_propria()
+    {
+        /*
+         * Raiz de agregado é o que a persistência grava e a API endereça: tem
+         * um Id do seu próprio tipo de identificador, e não um Guid solto.
+         */
+        Type[] raizes =
+        [
+            typeof(Cronograma),
+            typeof(BaseDeCustos),
+            typeof(Orcamento),
+            typeof(LinhaDeBase),
+            typeof(Acompanhamento),
+        ];
+
+        var semIdentidade = raizes
+            .Where(raiz => raiz.GetProperty("Id")?.PropertyType is not { } tipo
+                || !tipo.IsSubclassOf(typeof(Identificador))
+                || !tipo.Name.StartsWith(raiz.Name, StringComparison.Ordinal))
+            .Select(raiz => raiz.Name);
+
+        Assert.Empty(semIdentidade);
     }
 
     private static bool EhDaBibliotecaPadrao(string nome) =>

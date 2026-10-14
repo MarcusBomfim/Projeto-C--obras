@@ -12,13 +12,41 @@ namespace PlanejamentoObras.Dominio.LinhasDeBase;
 public sealed class ItemPlanejado : LinhaPlanejada
 {
     internal ItemPlanejado(LinhaDeItem item, IEnumerable<Dinheiro> valoresPlanejados, IEnumerable<Dinheiro> custosPlanejados)
-        : base(item.Numero, item.Descricao, item.Total, valoresPlanejados, item.CustoTotal, custosPlanejados)
+        : this(
+            item.Numero,
+            item.Descricao,
+            item.Total,
+            valoresPlanejados,
+            item.CustoTotal,
+            custosPlanejados,
+            item.Unidade,
+            item.Quantidade,
+            item.PrecoUnitario,
+            item.CustoUnitario,
+            item.Atividade!)
     {
-        Unidade = item.Unidade;
-        Quantidade = item.Quantidade;
-        PrecoUnitario = item.PrecoUnitario;
-        CustoUnitario = item.CustoUnitario;
-        Atividade = item.Atividade!;
+    }
+
+    /// <summary>Um item com os valores já prontos — o que a reconstituição de uma linha de base gravada usa.</summary>
+    internal ItemPlanejado(
+        NumeroDaEap numero,
+        string descricao,
+        Dinheiro total,
+        IEnumerable<Dinheiro> valoresPlanejados,
+        Dinheiro custoTotal,
+        IEnumerable<Dinheiro> custosPlanejados,
+        UnidadeDeMedida unidade,
+        decimal quantidade,
+        Dinheiro precoUnitario,
+        Dinheiro custoUnitario,
+        CodigoDaAtividade atividade)
+        : base(numero, descricao, total, valoresPlanejados, custoTotal, custosPlanejados)
+    {
+        Unidade = unidade;
+        Quantidade = quantidade;
+        PrecoUnitario = precoUnitario;
+        CustoUnitario = custoUnitario;
+        Atividade = atividade;
     }
 
     public UnidadeDeMedida Unidade { get; }

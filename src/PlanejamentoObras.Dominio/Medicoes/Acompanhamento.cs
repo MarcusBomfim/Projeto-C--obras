@@ -26,11 +26,26 @@ public sealed class Acompanhamento
     private readonly List<Medicao> _medicoes = [];
 
     public Acompanhamento(LinhaDeBase linhaDeBase)
+        : this(AcompanhamentoId.Novo(), linhaDeBase)
     {
+    }
+
+    /// <summary>
+    /// Um acompanhamento sem medições com uma identidade já existente — o
+    /// começo da reconstituição de um acompanhamento gravado. A persistência
+    /// registra as medições de novo, uma a uma, e cada uma passa pelas regras
+    /// de sempre (ADR-0010).
+    /// </summary>
+    internal Acompanhamento(AcompanhamentoId id, LinhaDeBase linhaDeBase)
+    {
+        ArgumentNullException.ThrowIfNull(id);
         ArgumentNullException.ThrowIfNull(linhaDeBase);
 
+        Id = id;
         LinhaDeBase = linhaDeBase;
     }
+
+    public AcompanhamentoId Id { get; }
 
     public LinhaDeBase LinhaDeBase { get; }
 
