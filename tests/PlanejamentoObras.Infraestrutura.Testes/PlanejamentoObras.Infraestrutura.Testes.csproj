@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <RootNamespace>PlanejamentoObras.Infraestrutura.Testes</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="xunit.v3.mtp-v2" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\PlanejamentoObras.Infraestrutura\PlanejamentoObras.Infraestrutura.csproj" />
+  </ItemGroup>
+  <!--
+    As obras sorteadas dos testes do domínio, compiladas aqui também: o que
+    se grava e se lê é exatamente o que o domínio já conferiu. Cinco arquivos
+    não justificam uma biblioteca de testes compartilhada.
+  -->
+  <ItemGroup>
+    <Compile Include="..\PlanejamentoObras.Dominio.Testes\Cronogramas\RedesAleatorias.cs" Link="Geradores\RedesAleatorias.cs" />
+    <Compile Include="..\PlanejamentoObras.Dominio.Testes\Orcamentos\OrcamentosAleatorios.cs" Link="Geradores\OrcamentosAleatorios.cs" />
+    <Compile Include="..\PlanejamentoObras.Dominio.Testes\ObrasAleatorias.cs" Link="Geradores\ObrasAleatorias.cs" />
+    <Compile Include="..\PlanejamentoObras.Dominio.Testes\ValorAgregado\MedicoesAleatorias.cs" Link="Geradores\MedicoesAleatorias.cs" />
+    <Compile Include="..\PlanejamentoObras.Dominio.Testes\FisicoFinanceiro\CasaTerrea.cs" Link="Geradores\CasaTerrea.cs" />
+  </ItemGroup>
+</Project>
