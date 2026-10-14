@@ -2,7 +2,7 @@ namespace PlanejamentoObras.Infraestrutura.Persistencia;
 
 /*
  * O que pode dar errado ao gravar e ler, cada um com o seu tipo. Quem chama
- * — a API, na Parte 5 — decide o que dizer a quem pediu: 409, 404, 412. Uma
+ * — a API — decide o que dizer a quem pediu: 409, 404, 412. Uma
  * DbUpdateException genérica obrigaria a abrir a exceção interna e conferir
  * o código do PostgreSQL em cada lugar.
  */
@@ -20,6 +20,30 @@ public sealed class ConflitoDeConcorrencia : Exception
     }
 
     public ConflitoDeConcorrencia(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
+
+    public ConflitoDeConcorrencia(string message, int versaoAtual)
+        : base(message) => VersaoAtual = versaoAtual;
+
+    /// <summary>A versão em que o agregado está no banco — a que quem gravou precisa ler de novo.</summary>
+    public int? VersaoAtual { get; }
+}
+
+/// <summary>A chave de idempotência já atendeu um pedido diferente deste.</summary>
+public sealed class ChaveDeIdempotenciaReutilizada : Exception
+{
+    public ChaveDeIdempotenciaReutilizada()
+    {
+    }
+
+    public ChaveDeIdempotenciaReutilizada(string message)
+        : base(message)
+    {
+    }
+
+    public ChaveDeIdempotenciaReutilizada(string message, Exception innerException)
         : base(message, innerException)
     {
     }

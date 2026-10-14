@@ -52,6 +52,7 @@ internal sealed class TabelaDeAgregados<TRegistro>(ContextoDoBanco contexto, Tim
     /// <param name="semReferencia">A mensagem, se o registro apontar para um agregado que não está gravado.</param>
     public async Task<int> Inserir(TRegistro registro, CancellationToken cancelamento, string? semReferencia = null)
     {
+        registro.EmpresaId = contexto.EmpresaQueGrava;
         Registros.Add(registro);
 
         try
@@ -136,7 +137,8 @@ internal sealed class TabelaDeAgregados<TRegistro>(ContextoDoBanco contexto, Tim
         throw atual is null
             ? new AgregadoNaoEncontrado($"Não existe {agregado} {id}.")
             : new ConflitoDeConcorrencia(
-                $"{Maiuscula(agregado)} {id} mudou desde a versão {versaoLida}: está na versão {atual}. Leia de novo e refaça a alteração.");
+                $"{Maiuscula(agregado)} {id} mudou desde a versão {versaoLida}: está na versão {atual}. Leia de novo e refaça a alteração.",
+                atual.Value);
     }
 
     /// <summary>O código de erro do PostgreSQL por trás de uma exceção, se houver.</summary>

@@ -23,6 +23,47 @@ namespace PlanejamentoObras.Infraestrutura.Persistencia.Migracoes
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("PlanejamentoObras.Infraestrutura.Persistencia.Idempotencia.RegistroDeIdempotencia", b =>
+                {
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
+                    b.Property<string>("Chave")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("chave");
+
+                    b.Property<string>("Cabecalhos")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("cabecalhos");
+
+                    b.Property<string>("Corpo")
+                        .HasColumnType("text")
+                        .HasColumnName("corpo");
+
+                    b.Property<DateTimeOffset>("CriadaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criada_em");
+
+                    b.Property<string>("ImpressaoDoPedido")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("impressao_do_pedido");
+
+                    b.Property<short?>("Status")
+                        .HasColumnType("smallint")
+                        .HasColumnName("status");
+
+                    b.HasKey("EmpresaId", "Chave")
+                        .HasName("pk_chaves_de_idempotencia");
+
+                    b.ToTable("chaves_de_idempotencia", "planejamento", t =>
+                        {
+                            t.HasCheckConstraint("ck_chaves_de_idempotencia_chave", "length(chave) between 1 and 255");
+                        });
+                });
+
             modelBuilder.Entity("PlanejamentoObras.Infraestrutura.Persistencia.Registros.RegistroDeAcompanhamento", b =>
                 {
                     b.Property<Guid>("Id")
@@ -42,6 +83,10 @@ namespace PlanejamentoObras.Infraestrutura.Persistencia.Migracoes
                         .HasColumnType("jsonb")
                         .HasColumnName("documento");
 
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
                     b.Property<short>("Formato")
                         .HasColumnType("smallint")
                         .HasColumnName("formato");
@@ -58,8 +103,8 @@ namespace PlanejamentoObras.Infraestrutura.Persistencia.Migracoes
                     b.HasKey("Id")
                         .HasName("pk_acompanhamentos");
 
-                    b.HasIndex("LinhaDeBaseId")
-                        .HasDatabaseName("ix_acompanhamentos_linha_de_base_id");
+                    b.HasIndex("EmpresaId", "LinhaDeBaseId")
+                        .HasDatabaseName("ix_acompanhamentos_empresa_id_linha_de_base_id");
 
                     b.ToTable("acompanhamentos", "planejamento", t =>
                         {
@@ -94,6 +139,10 @@ namespace PlanejamentoObras.Infraestrutura.Persistencia.Migracoes
                         .HasColumnType("jsonb")
                         .HasColumnName("documento");
 
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
                     b.Property<short>("Formato")
                         .HasColumnType("smallint")
                         .HasColumnName("formato");
@@ -112,8 +161,8 @@ namespace PlanejamentoObras.Infraestrutura.Persistencia.Migracoes
                     b.HasKey("Id")
                         .HasName("pk_bases_de_custos");
 
-                    b.HasIndex("Nome")
-                        .HasDatabaseName("ix_bases_de_custos_nome");
+                    b.HasIndex("EmpresaId", "Nome")
+                        .HasDatabaseName("ix_bases_de_custos_empresa_id_nome");
 
                     b.ToTable("bases_de_custos", "planejamento", t =>
                         {
@@ -144,6 +193,10 @@ namespace PlanejamentoObras.Infraestrutura.Persistencia.Migracoes
                         .HasColumnType("jsonb")
                         .HasColumnName("documento");
 
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
                     b.Property<short>("Formato")
                         .HasColumnType("smallint")
                         .HasColumnName("formato");
@@ -162,8 +215,8 @@ namespace PlanejamentoObras.Infraestrutura.Persistencia.Migracoes
                     b.HasKey("Id")
                         .HasName("pk_cronogramas");
 
-                    b.HasIndex("Nome")
-                        .HasDatabaseName("ix_cronogramas_nome");
+                    b.HasIndex("EmpresaId", "Nome")
+                        .HasDatabaseName("ix_cronogramas_empresa_id_nome");
 
                     b.ToTable("cronogramas", "planejamento", t =>
                         {
@@ -198,6 +251,10 @@ namespace PlanejamentoObras.Infraestrutura.Persistencia.Migracoes
                         .HasColumnType("jsonb")
                         .HasColumnName("documento");
 
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
                     b.Property<short>("Formato")
                         .HasColumnType("smallint")
                         .HasColumnName("formato");
@@ -216,8 +273,11 @@ namespace PlanejamentoObras.Infraestrutura.Persistencia.Migracoes
                     b.HasKey("Id")
                         .HasName("pk_linhas_de_base");
 
-                    b.HasIndex("Nome")
-                        .HasDatabaseName("ix_linhas_de_base_nome");
+                    b.HasAlternateKey("EmpresaId", "Id")
+                        .HasName("ak_linhas_de_base_empresa_id_id");
+
+                    b.HasIndex("EmpresaId", "Nome")
+                        .HasDatabaseName("ix_linhas_de_base_empresa_id_nome");
 
                     b.ToTable("linhas_de_base", "planejamento", t =>
                         {
@@ -248,6 +308,10 @@ namespace PlanejamentoObras.Infraestrutura.Persistencia.Migracoes
                         .HasColumnType("jsonb")
                         .HasColumnName("documento");
 
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
                     b.Property<short>("Formato")
                         .HasColumnType("smallint")
                         .HasColumnName("formato");
@@ -266,8 +330,8 @@ namespace PlanejamentoObras.Infraestrutura.Persistencia.Migracoes
                     b.HasKey("Id")
                         .HasName("pk_orcamentos");
 
-                    b.HasIndex("Nome")
-                        .HasDatabaseName("ix_orcamentos_nome");
+                    b.HasIndex("EmpresaId", "Nome")
+                        .HasDatabaseName("ix_orcamentos_empresa_id_nome");
 
                     b.ToTable("orcamentos", "planejamento", t =>
                         {
@@ -283,7 +347,8 @@ namespace PlanejamentoObras.Infraestrutura.Persistencia.Migracoes
                 {
                     b.HasOne("PlanejamentoObras.Infraestrutura.Persistencia.Registros.RegistroDeLinhaDeBase", null)
                         .WithMany()
-                        .HasForeignKey("LinhaDeBaseId")
+                        .HasForeignKey("EmpresaId", "LinhaDeBaseId")
+                        .HasPrincipalKey("EmpresaId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_acompanhamentos_linhas_de_base");

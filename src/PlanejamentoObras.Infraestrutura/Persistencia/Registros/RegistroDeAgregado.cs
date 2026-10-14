@@ -13,6 +13,9 @@ internal abstract class RegistroDeAgregado
 {
     public Guid Id { get; set; }
 
+    /// <summary>A empresa dona do agregado. Toda consulta é filtrada por ela (ADR-0013).</summary>
+    public Guid EmpresaId { get; set; }
+
     /// <summary>Começa em 1 e cresce a cada gravação: é o que a concorrência otimista confere.</summary>
     public int Versao { get; set; }
 

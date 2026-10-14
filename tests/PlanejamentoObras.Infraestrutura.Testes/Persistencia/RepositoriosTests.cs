@@ -19,20 +19,26 @@ namespace PlanejamentoObras.Infraestrutura.Testes.Persistencia;
 
 /*
  * Os repositórios contra um PostgreSQL de verdade. Cada teste cria os seus
- * agregados — ids novos —, então os testes não se atrapalham nem dependem de
- * ordem.
+ * agregados — ids novos —, numa empresa só dele, então os testes não se
+ * atrapalham nem dependem de ordem.
  */
 public sealed class RepositoriosTests(BancoDeTestes banco)
 {
     private static CancellationToken Cancelamento => TestContext.Current.CancellationToken;
 
+    private readonly Guid _empresa = Guid.CreateVersion7();
+
     private readonly RelogioDeTeste _relogio = new();
 
-    private RepositorioDeCronogramas Cronogramas() => new(banco.NovoContexto(), _relogio);
+    private RepositorioDeCronogramas Cronogramas() => new(banco.NovoContexto(_empresa), _relogio);
 
-    private RepositorioDeBasesDeCustos BasesDeCustos() => new(banco.NovoContexto(), _relogio);
+    private RepositorioDeBasesDeCustos BasesDeCustos() => new(banco.NovoContexto(_empresa), _relogio);
 
-    private RepositorioDeOrcamentos Orcamentos() => new(banco.NovoContexto(), _relogio);
+    private RepositorioDeOrcamentos Orcamentos() => new(banco.NovoContexto(_empresa), _relogio);
+
+    private RepositorioDeLinhasDeBase LinhasDeBase() => new(banco.NovoContexto(_empresa), _relogio);
+
+    private RepositorioDeAcompanhamentos Acompanhamentos() => new(banco.NovoContexto(_empresa), _relogio);
 
     private static Cronograma UmCronograma(string nome = "Casa")
     {
@@ -81,10 +87,10 @@ public sealed class RepositoriosTests(BancoDeTestes banco)
             var acompanhamento = new Acompanhamento(linhaDeBase);
             MedicoesAleatorias.Registrar(acompanhamento, semente);
 
-            await new RepositorioDeLinhasDeBase(banco.NovoContexto(), _relogio).Adicionar(linhaDeBase, Cancelamento);
-            await new RepositorioDeAcompanhamentos(banco.NovoContexto(), _relogio).Adicionar(acompanhamento, Cancelamento);
+            await LinhasDeBase().Adicionar(linhaDeBase, Cancelamento);
+            await Acompanhamentos().Adicionar(acompanhamento, Cancelamento);
 
-            var lido = (await new RepositorioDeAcompanhamentos(banco.NovoContexto(), _relogio).Obter(acompanhamento.Id, Cancelamento))!.Agregado;
+            var lido = (await Acompanhamentos().Obter(acompanhamento.Id, Cancelamento))!.Agregado;
 
             Assert.Equal(linhaDeBase.Id, lido.LinhaDeBase.Id);
             Assert.Equal(acompanhamento.Medicoes.Count, lido.Medicoes.Count);
@@ -142,6 +148,7 @@ public sealed class RepositoriosTests(BancoDeTestes banco)
             Cronogramas().Atualizar(deBruno.Agregado, deBruno.Versao, Cancelamento));
 
         Assert.Contains("mudou desde a versão 1: está na versão 2", erro.Message, StringComparison.Ordinal);
+        Assert.Equal(2, erro.VersaoAtual);
 
         var gravado = (await Cronogramas().Obter(cronograma.Id, Cancelamento))!.Agregado;
         Assert.Equal((12, 20), (gravado.Atividade("FUN").DuracaoEmDiasUteis, gravado.Atividade("EST").DuracaoEmDiasUteis));
@@ -216,20 +223,20 @@ public sealed class RepositoriosTests(BancoDeTestes banco)
     [Fact]
     public async Task Linha_de_base_em_uso_nao_sai_do_banco()
     {
-        var linhasDeBase = new RepositorioDeLinhasDeBase(banco.NovoContexto(), _relogio);
-        var acompanhamentos = new RepositorioDeAcompanhamentos(banco.NovoContexto(), _relogio);
+        var linhasDeBase = LinhasDeBase();
+        var acompanhamentos = Acompanhamentos();
         var linhaDeBase = CasaTerrea.LinhaDeBaseAprovada();
         var acompanhamento = new Acompanhamento(linhaDeBase);
         await linhasDeBase.Adicionar(linhaDeBase, Cancelamento);
         await acompanhamentos.Adicionar(acompanhamento, Cancelamento);
 
         var erro = await Assert.ThrowsAsync<AgregadoEmUso>(() =>
-            new RepositorioDeLinhasDeBase(banco.NovoContexto(), _relogio).Remover(linhaDeBase.Id, 1, Cancelamento));
+            LinhasDeBase().Remover(linhaDeBase.Id, 1, Cancelamento));
 
         Assert.Contains("Há acompanhamento medido contra a linha de base", erro.Message, StringComparison.Ordinal);
 
-        await new RepositorioDeAcompanhamentos(banco.NovoContexto(), _relogio).Remover(acompanhamento.Id, 1, Cancelamento);
-        await new RepositorioDeLinhasDeBase(banco.NovoContexto(), _relogio).Remover(linhaDeBase.Id, 1, Cancelamento);
+        await Acompanhamentos().Remover(acompanhamento.Id, 1, Cancelamento);
+        await LinhasDeBase().Remover(linhaDeBase.Id, 1, Cancelamento);
     }
 
     [Fact]
@@ -238,7 +245,7 @@ public sealed class RepositoriosTests(BancoDeTestes banco)
         var acompanhamento = new Acompanhamento(CasaTerrea.LinhaDeBaseAprovada());
 
         var erro = await Assert.ThrowsAsync<AgregadoNaoEncontrado>(() =>
-            new RepositorioDeAcompanhamentos(banco.NovoContexto(), _relogio).Adicionar(acompanhamento, Cancelamento));
+            Acompanhamentos().Adicionar(acompanhamento, Cancelamento));
 
         Assert.Contains("grave-a antes do acompanhamento", erro.Message, StringComparison.Ordinal);
     }
@@ -248,15 +255,15 @@ public sealed class RepositoriosTests(BancoDeTestes banco)
     {
         var linhaDeBase = CasaTerrea.LinhaDeBaseAprovada();
         var acompanhamento = new Acompanhamento(linhaDeBase);
-        await new RepositorioDeLinhasDeBase(banco.NovoContexto(), _relogio).Adicionar(linhaDeBase, Cancelamento);
-        await new RepositorioDeAcompanhamentos(banco.NovoContexto(), _relogio).Adicionar(acompanhamento, Cancelamento);
+        await LinhasDeBase().Adicionar(linhaDeBase, Cancelamento);
+        await Acompanhamentos().Adicionar(acompanhamento, Cancelamento);
 
-        var lido = (await new RepositorioDeAcompanhamentos(banco.NovoContexto(), _relogio).Obter(acompanhamento.Id, Cancelamento))!;
+        var lido = (await Acompanhamentos().Obter(acompanhamento.Id, Cancelamento))!;
         lido.Agregado.RegistrarMedicao(new DateOnly(2026, 10, 1), new LancamentoDeMedicao("2.1", 0.6m, 6_200m));
-        var versao = await new RepositorioDeAcompanhamentos(banco.NovoContexto(), _relogio).Atualizar(lido.Agregado, lido.Versao, Cancelamento);
+        var versao = await Acompanhamentos().Atualizar(lido.Agregado, lido.Versao, Cancelamento);
 
-        var relido = (await new RepositorioDeAcompanhamentos(banco.NovoContexto(), _relogio).Obter(acompanhamento.Id, Cancelamento))!;
-        var listados = await new RepositorioDeAcompanhamentos(banco.NovoContexto(), _relogio).ListarDaLinhaDeBase(linhaDeBase.Id, Cancelamento);
+        var relido = (await Acompanhamentos().Obter(acompanhamento.Id, Cancelamento))!;
+        var listados = await Acompanhamentos().ListarDaLinhaDeBase(linhaDeBase.Id, Cancelamento);
 
         Assert.Equal(2, versao);
         Assert.Equal(0.6m, Assert.Single(relido.Agregado.Medicoes).Itens[0].Quantidade);
@@ -277,7 +284,7 @@ public sealed class RepositoriosTests(BancoDeTestes banco)
         await Cronogramas().Adicionar(cronograma, Cancelamento);
         await BasesDeCustos().Adicionar(baseDeCustos, Cancelamento);
         await Orcamentos().Adicionar(orcamento, Cancelamento);
-        await new RepositorioDeLinhasDeBase(banco.NovoContexto(), _relogio).Adicionar(linhaDeBase, Cancelamento);
+        await LinhasDeBase().Adicionar(linhaDeBase, Cancelamento);
 
         cronograma.Renomear("Casa térrea");
         baseDeCustos.Renomear("SINAPI SP");
@@ -287,7 +294,7 @@ public sealed class RepositoriosTests(BancoDeTestes banco)
         await BasesDeCustos().Atualizar(baseDeCustos, 1, Cancelamento);
         await Orcamentos().Atualizar(orcamento, 1, Cancelamento);
 
-        await using var contexto = banco.NovoContexto();
+        await using var contexto = banco.NovoContexto(_empresa);
         var gravadoDoCronograma = await contexto.Cronogramas.AsNoTracking().SingleAsync(registro => registro.Id == cronograma.Id.Valor, Cancelamento);
         var gravadoDaBase = await contexto.BasesDeCustos.AsNoTracking().SingleAsync(registro => registro.Id == baseDeCustos.Id.Valor, Cancelamento);
         var gravadoDoOrcamento = await contexto.Orcamentos.AsNoTracking().SingleAsync(registro => registro.Id == orcamento.Id.Valor, Cancelamento);
