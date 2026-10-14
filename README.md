@@ -4,7 +4,7 @@
 
 Planejamento e controle de obra como o engenheiro de planejamento faz: rede de precedências e caminho crítico, orçamento com composições de custo e BDI, o cronograma físico-financeiro que junta os dois — e a obra medida mês a mês contra o plano aprovado, com boletim de medição e valor agregado.
 
-C# 14 · .NET 10 · xUnit v3 · GitHub Actions
+C# 14 · .NET 10 · EF Core 10 · PostgreSQL 17 · Testcontainers · xUnit v3 · GitHub Actions
 
 ## O problema
 
@@ -206,6 +206,22 @@ A obra está atrasada e acima do custo: em dois meses, executou o que o plano pr
 
 O prazo agregado mede o atraso em meses. Ao contrário do IDP clássico, ele não volta a 1 quando a obra termina atrasada — VA e VP chegam os dois ao orçamento no fim, mas o tempo gasto não volta.
 
+### Gravação
+
+Cada agregado é gravado inteiro, como um documento `jsonb` numa tabela própria do PostgreSQL, e volta pelas mesmas regras da escrita: um cronograma com ciclo, editado à mão no banco, é recusado na leitura com o id e o motivo ([ADR-0010](docs/adr/0010-identidade-e-reconstituicao-dos-agregados.md), [ADR-0011](docs/adr/0011-agregados-gravados-como-documentos-jsonb.md)).
+
+```csharp
+servicos.AdicionarPersistencia(conexao);                  // contexto e repositórios, um por requisição
+
+await cronogramas.Adicionar(cronograma);                  // versão 1
+
+var lido = await cronogramas.Obter(cronograma.Id);        // o agregado e a versão lida
+lido!.Agregado.AlterarDuracaoDaAtividade("FUN", 12);
+await cronogramas.Atualizar(lido.Agregado, lido.Versao);  // versão 2
+```
+
+Se outra pessoa gravou o mesmo cronograma entre a leitura e a gravação, a gravação é recusada com `ConflitoDeConcorrencia`: "O cronograma … mudou desde a versão 1: está na versão 2. Leia de novo e refaça a alteração." A versão é conferida dentro do próprio `update`: dez gravações simultâneas a partir da mesma versão, e passa exatamente uma ([ADR-0012](docs/adr/0012-concorrencia-otimista-com-versao-explicita.md)).
+
 ## Roteiro
 
 O projeto é construído em partes, cada uma entregue funcionando, testada e documentada.
@@ -215,7 +231,7 @@ O projeto é construído em partes, cada uma entregue funcionando, testada e doc
 | 1 | Cronograma: rede de precedências, caminho crítico, calendário e datas | ✅ |
 | 2 | Base de custos e composições, orçamento com EAP e BDI, cronograma físico-financeiro | ✅ |
 | 3 | Linha de base, medições, boletim de medição e valor agregado (PV, EV, AC, SPI, CPI, EAC) | ✅ |
-| 4 | Persistência com EF Core e PostgreSQL, testes de integração com Testcontainers | |
+| 4 | Persistência com EF Core e PostgreSQL, testes de integração com Testcontainers | ✅ |
 | 5 | API REST: JWT, autorização por política, multi-tenant, ProblemDetails, idempotência e concorrência otimista | |
 | 6 | Eventos de domínio, outbox e processamento em segundo plano | |
 | 7 | Front-end em React: Gantt com caminho crítico, curva S e painel de valor agregado | |
@@ -250,6 +266,16 @@ O projeto é construído em partes, cada uma entregue funcionando, testada e doc
 - **Prazo agregado** (earned schedule): o atraso em meses e a duração estimada da obra.
 - **Curvas S** de valor planejado, valor agregado e custo real, mês a mês.
 
+**Parte 4 — persistência**
+
+- **Identidade própria em cada agregado** — `CronogramaId`, `OrcamentoId` e os outros —: o id de um orçamento passado no lugar do de um cronograma é erro de compilação. Guid versão 7, que nasce em ordem e não fragmenta o índice.
+- **Um documento `jsonb` por agregado**, numa tabela por tipo, com ao lado só o que o banco precisa enxergar: identidade, versão, formato, datas, nome — e a chave estrangeira do acompanhamento para a linha de base, que não sai do banco enquanto houver acompanhamento contra ela.
+- **A leitura passa pelas regras.** O agregado é reconstituído pelo domínio, com uma só checagem de ciclo, em O(V + E), para a rede inteira. O BDI e a linha de base voltam como foram gravados, sem recalcular.
+- **Leitura estrita e formato com número.** Campo que falta, nulo onde não cabe, campo desconhecido ou documento de outra versão: a leitura falha, com o id e o motivo, em vez de inventar um zero.
+- **Concorrência otimista** com a versão conferida no próprio `update`, sem janela entre conferir e gravar; o conflito diz em que versão o agregado está.
+- **Exceções com nome** para o que o banco responde: conflito, não encontrado, já existe, em uso, documento inválido.
+- **Migrações do EF Core** no repositório, com o `dotnet-ef` fixado como ferramenta local.
+
 ## Decisões
 
 As decisões que mudam o desenho do sistema estão registradas em [`docs/adr`](docs/adr):
@@ -263,6 +289,9 @@ As decisões que mudam o desenho do sistema estão registradas em [`docs/adr`](d
 - [ADR-0007](docs/adr/0007-linha-de-base-congelada.md) — a linha de base é uma cópia congelada do plano, a preço e a custo, sem referência a nada vivo.
 - [ADR-0008](docs/adr/0008-medicao-historico-que-so-cresce.md) — a medição é um histórico que só cresce, e o valor do mês é a diferença entre acumulados.
 - [ADR-0009](docs/adr/0009-valor-agregado-a-custo-e-prazo-agregado.md) — valor agregado a custo, estimativas a partir dos valores, e prazo agregado em meses.
+- [ADR-0010](docs/adr/0010-identidade-e-reconstituicao-dos-agregados.md) — cada agregado tem identidade do seu tipo, e a leitura do banco passa pelas regras; o que foi aprovado volta como foi aprovado.
+- [ADR-0011](docs/adr/0011-agregados-gravados-como-documentos-jsonb.md) — cada agregado é um documento `jsonb`, lido de forma estrita e com formato numerado; os testes usam PostgreSQL de verdade.
+- [ADR-0012](docs/adr/0012-concorrencia-otimista-com-versao-explicita.md) — concorrência otimista com versão explícita, conferida pelo banco num comando só.
 
 E algumas que não precisaram de ADR:
 
@@ -281,30 +310,46 @@ E algumas que não precisaram de ADR:
   - **planilha** — cada número se refaz à mão, refeito pelo teste com `decimal.Round`, sem usar o código que está conferindo;
   - **físico-financeiro** — fecha com o orçamento ao centavo, nas duas curvas, e põe cada real no mês em que o serviço acontece.
   - **valor agregado** — com glosas, meses pulados e obras fora do prazo: cada valor refeito a partir dos lançamentos, as etapas somando os itens, e o prazo agregado contando a mesma história do valor agregado.
-- **Arquitetura.** O domínio só referencia a biblioteca padrão; toda classe pública é selada, estática ou abstrata; nenhuma propriedade tem `set` público — o estado só muda pelos métodos do domínio.
+- **Persistência contra PostgreSQL de verdade**, num contêiner do Testcontainers: o esquema que as migrações criam e as restrições que o banco garante; obras sorteadas que vão ao `jsonb` e voltam calculando o mesmo; a versão que recusa quem grava por cima — dez gravações simultâneas, e passa uma —; e um documento estragado à mão no banco, recusado na leitura. Sem Docker, esses testes são pulados, com o motivo; no CI, falham.
+- **O formato do que se grava.** O JSON de cada agregado é comparado com o formato esperado; a leitura estrita recusa campo a mais, campo a menos, nulo, enum desconhecido, tipo de nó desconhecido e documento de outra versão; 400 obras sorteadas fazem ida e volta pelo documento. E um teste sem banco falha se o modelo do EF Core mudar sem migração.
+- **Arquitetura.** O domínio só referencia a biblioteca padrão; toda classe pública é selada, estática ou abstrata; nenhuma propriedade tem `set` público — o estado só muda pelos métodos do domínio; todo agregado tem identidade própria; e só a infraestrutura e os testes do domínio enxergam os internos dele.
 
 ## Como rodar
 
-Pré-requisito: [SDK do .NET 10](https://dotnet.microsoft.com/download).
+Pré-requisitos: [SDK do .NET 10](https://dotnet.microsoft.com/download) e, para os testes de integração, Docker.
 
 ```bash
 dotnet test --solution PlanejamentoObras.slnx
 ```
 
+Sem Docker, os testes que precisam do PostgreSQL são pulados, com o motivo, e o resto roda.
+
+Para criar o banco num PostgreSQL local, com o `dotnet-ef` que o repositório fixa:
+
+```bash
+docker run -d --name planejamento-obras-db -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:17.6-alpine
+dotnet tool restore
+dotnet ef database update --project src/PlanejamentoObras.Infraestrutura --connection "Host=localhost;Database=planejamento_obras;Username=postgres;Password=postgres"
+```
+
 ## Estrutura
 
 ```text
-src/PlanejamentoObras.Dominio/               regras do negócio, sem dependências
-  Comum/                                     dinheiro e exceção de domínio
-  Calendarios/                               dias úteis e feriados
-  Cronogramas/                               rede, caminho crítico e programação
-  Custos/                                    insumos, composições e custo unitário
-  Orcamentos/                                EAP, BDI, planilha e curva ABC
-  FisicoFinanceiro/                          o orçamento distribuído nos meses
-  LinhasDeBase/                              o plano aprovado, congelado
-  Medicoes/                                  medições mensais e boletim de medição
-  ValorAgregado/                             desempenho de prazo e custo contra a linha de base
-tests/PlanejamentoObras.Dominio.Testes/      exemplos, propriedades e o exemplo deste README
-tests/PlanejamentoObras.Arquitetura.Testes/  regras que o domínio não pode quebrar
-docs/adr/                                    decisões de arquitetura
+src/PlanejamentoObras.Dominio/                  regras do negócio, sem dependências
+  Comum/                                        dinheiro, identificador e exceção de domínio
+  Calendarios/                                  dias úteis e feriados
+  Cronogramas/                                  rede, caminho crítico e programação
+  Custos/                                       insumos, composições e custo unitário
+  Orcamentos/                                   EAP, BDI, planilha e curva ABC
+  FisicoFinanceiro/                             o orçamento distribuído nos meses
+  LinhasDeBase/                                 o plano aprovado, congelado
+  Medicoes/                                     medições mensais e boletim de medição
+  ValorAgregado/                                desempenho de prazo e custo contra a linha de base
+src/PlanejamentoObras.Infraestrutura/           persistência no PostgreSQL
+  Documentos/                                   os agregados em JSON, e de volta
+  Persistencia/                                 contexto, migrações, repositórios e concorrência
+tests/PlanejamentoObras.Dominio.Testes/         exemplos, propriedades e o exemplo deste README
+tests/PlanejamentoObras.Infraestrutura.Testes/  documentos e repositórios, contra PostgreSQL de verdade
+tests/PlanejamentoObras.Arquitetura.Testes/     regras que o domínio não pode quebrar
+docs/adr/                                       decisões de arquitetura
 ```
