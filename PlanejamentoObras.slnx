@@ -1,9 +1,11 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/PlanejamentoObras.Api/PlanejamentoObras.Api.csproj" />
     <Project Path="src/PlanejamentoObras.Dominio/PlanejamentoObras.Dominio.csproj" />
     <Project Path="src/PlanejamentoObras.Infraestrutura/PlanejamentoObras.Infraestrutura.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/PlanejamentoObras.Api.Testes/PlanejamentoObras.Api.Testes.csproj" />
     <Project Path="tests/PlanejamentoObras.Arquitetura.Testes/PlanejamentoObras.Arquitetura.Testes.csproj" />
     <Project Path="tests/PlanejamentoObras.Dominio.Testes/PlanejamentoObras.Dominio.Testes.csproj" />
     <Project Path="tests/PlanejamentoObras.Infraestrutura.Testes/PlanejamentoObras.Infraestrutura.Testes.csproj" />
