@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using PlanejamentoObras.Api.Testes;
 using PlanejamentoObras.Infraestrutura.Testes.Persistencia;
+using PlanejamentoObras.Processamento;
 
 [assembly: AssemblyFixture(typeof(ApiDeTestes))]
 
@@ -17,11 +18,18 @@ namespace PlanejamentoObras.Api.Testes;
 /// empresa, com que papéis. A empresa de cada teste é nova, então os testes
 /// não se enxergam, como duas construtoras não se enxergam.
 /// </summary>
+/// <remarks>
+/// Ao lado da API, o processador da caixa de saída, com o papel dele no banco,
+/// como o host do processador o monta — parado: o teste que precisa do
+/// painel em dia pede para tratar a fila.
+/// </remarks>
 public sealed class ApiDeTestes : IAsyncLifetime
 {
     private readonly BancoDeTestes _banco = new();
 
     private Fabrica? _fabrica;
+
+    private ServiceProvider? _processamento;
 
     public BancoDeTestes Banco => _banco;
 
@@ -44,17 +52,54 @@ public sealed class ApiDeTestes : IAsyncLifetime
         if (_banco.Disponivel)
         {
             _fabrica = new Fabrica(_banco.ConexaoDaAplicacao);
+            _processamento = new ServiceCollection()
+                .AddLogging()
+                .AdicionarProcessamento(_banco.ConexaoDoProcessador)
+                .BuildServiceProvider();
         }
     }
 
     public async ValueTask DisposeAsync()
     {
+        if (_processamento is not null)
+        {
+            await _processamento.DisposeAsync();
+        }
+
         if (_fabrica is not null)
         {
             await _fabrica.DisposeAsync();
         }
 
         await _banco.DisposeAsync();
+    }
+
+    /// <summary>
+    /// Trata a caixa de saída, como o processador trataria, até a condição
+    /// valer. Até, e não uma vez: os testes rodam em paralelo, e outro teste
+    /// pode estar tratando, naquele instante, a mensagem que este espera.
+    /// </summary>
+    public async Task ProcessarAte(Func<Task<bool>> condicao, string descricao)
+    {
+        ArgumentNullException.ThrowIfNull(condicao);
+        Assert.SkipWhen(_processamento is null, _banco.MotivoDaIndisponibilidade);
+
+        var processador = _processamento!.GetRequiredService<ProcessadorDaCaixaDeSaida>();
+        var cancelamento = TestContext.Current.CancellationToken;
+        var limite = DateTime.UtcNow + TimeSpan.FromSeconds(30);
+
+        while (true)
+        {
+            await processador.ProcessarPendentes(cancelamento);
+
+            if (await condicao())
+            {
+                return;
+            }
+
+            Assert.True(DateTime.UtcNow < limite, $"Passaram 30 segundos de fila tratada, e ainda não: {descricao}.");
+            await Task.Delay(TimeSpan.FromMilliseconds(50), cancelamento);
+        }
     }
 
     /// <summary>Um cliente com o token de alguém da empresa, com os papéis dados.</summary>

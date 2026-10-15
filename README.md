@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/MarcusBomfim/Projeto-C--obras/actions/workflows/ci.yml/badge.svg)](https://github.com/MarcusBomfim/Projeto-C--obras/actions/workflows/ci.yml)
 
-Planejamento e controle de obra como o engenheiro de planejamento faz: rede de precedências e caminho crítico, orçamento com composições de custo e BDI, o cronograma físico-financeiro que junta os dois — e a obra medida mês a mês contra o plano aprovado, com boletim de medição e valor agregado.
+Planejamento e controle de obra como o engenheiro de planejamento faz: rede de precedências e caminho crítico, orçamento com composições de custo e BDI, o cronograma físico-financeiro que junta os dois — e a obra medida mês a mês contra o plano aprovado, com boletim de medição, valor agregado e um painel das obras que se atualiza em segundo plano a cada medição.
 
 C# 14 · .NET 10 · ASP.NET Core 10 · EF Core 10 · PostgreSQL 17 · Testcontainers · xUnit v3 · GitHub Actions
 
@@ -274,8 +274,47 @@ Cada recurso tem o papel que o altera; ler é de qualquer pessoa da empresa ([AD
 | `/api/orcamentos` | `orcamentista` | planilha, curva ABC e físico-financeiro, contra a base escolhida |
 | `/api/linhas-de-base` | `gestor` | — o plano aprovado não muda |
 | `/api/acompanhamentos` | `engenheiro` | medições, boletim e valor agregado |
+| `/api/painel` | ninguém: o processador mantém | a situação de cada obra na última medição |
 
-O exemplo desta página inteiro — da base de custos ao valor agregado — roda pela API num teste, cada passo pelo papel que cuida dele: [`ExemploDoReadmePelaApiTests`](tests/PlanejamentoObras.Api.Testes/ExemploDoReadmePelaApiTests.cs).
+O exemplo desta página inteiro — da base de custos ao painel das obras — roda pela API num teste, cada passo pelo papel que cuida dele: [`ExemploDoReadmePelaApiTests`](tests/PlanejamentoObras.Api.Testes/ExemploDoReadmePelaApiTests.cs).
+
+### Em segundo plano
+
+Registrar a medição não espera o painel. O acompanhamento registra o fato — `MedicaoRegistrada`, no passado —, e o fato vira uma mensagem na caixa de saída, gravada na mesma transação que o acompanhamento: ou ficam os dois, ou nenhum. Um processador, em host próprio, é acordado pelo `NOTIFY` do PostgreSQL assim que a transação é confirmada, trata a mensagem em nome da empresa dela e refaz a linha da obra no painel ([ADR-0016](docs/adr/0016-eventos-de-dominio.md), [ADR-0017](docs/adr/0017-caixa-de-saida-e-processamento-em-segundo-plano.md)):
+
+```http
+GET /api/painel
+```
+
+```json
+[
+  {
+    "acompanhamento": "01a13d26-a6e7-…",
+    "linhaDeBase": "01a13d26-a68f-…",
+    "obra": "Linha de base 1 — contrato",
+    "situacao": "Critica",
+    "medicao": 2,
+    "mes": "2026-11-01",
+    "orcamentoNoTermino": 1388822.24,
+    "valorPlanejado": 563875.75,
+    "valorAgregado": 416697.00,
+    "custoReal": 432700,
+    "indiceDeDesempenhoDePrazo": 0.7389872680284619439654923979,
+    "indiceDeDesempenhoDeCusto": 0.9630159463831754102149295124,
+    "estimativaNoTermino": 1442159.13,
+    "variacaoNoTermino": -53336.89,
+    "duracaoPlanejadaEmMeses": 4,
+    "prazoAgregadoEmMeses": 1.611615097740273637141501897,
+    "duracaoEstimadaEmMeses": 4.9639644175691833978675266314,
+    "versaoDoAcompanhamento": 3,
+    "atualizadoEm": "2026-10-15T01:21:45.961211+00:00"
+  }
+]
+```
+
+A situação é a do pior índice: abaixo de 0,85, a obra está crítica; abaixo de 0,95, pede atenção. Aqui, o prazo decide. A linha diz de que versão do acompanhamento veio: o painel pode estar instantes atrás da última medição, e quem precisar do número de agora lê o valor agregado do acompanhamento.
+
+A mensagem que falha volta mais tarde — 30 segundos, depois um minuto, dois, até uma hora —, e o que o tratador gravou antes de falhar é desfeito. Na décima falha, a fila desiste e guarda o erro para alguém ver. Dois processadores dividem a fila sem tratar a mesma mensagem duas vezes.
 
 ## Roteiro
 
@@ -288,7 +327,7 @@ O projeto é construído em partes, cada uma entregue funcionando, testada e doc
 | 3 | Linha de base, medições, boletim de medição e valor agregado (PV, EV, AC, SPI, CPI, EAC) | ✅ |
 | 4 | Persistência com EF Core e PostgreSQL, testes de integração com Testcontainers | ✅ |
 | 5 | API REST: JWT, autorização por política, multi-tenant, ProblemDetails, idempotência e concorrência otimista | ✅ |
-| 6 | Eventos de domínio, outbox e processamento em segundo plano | |
+| 6 | Eventos de domínio, outbox e processamento em segundo plano | ✅ |
 | 7 | Front-end em React: Gantt com caminho crítico, curva S e painel de valor agregado | |
 | 8 | Observabilidade com OpenTelemetry, Docker e entrega contínua | |
 
@@ -342,6 +381,16 @@ O projeto é construído em partes, cada uma entregue funcionando, testada e doc
 - **JSON estrito na entrada:** campo que falta, campo a mais, nulo onde não cabe e enum em número dão 400, dizendo qual.
 - **Documento OpenAPI** com o esquema de autenticação e os cabeçalhos que cada endpoint exige.
 
+**Parte 6 — eventos e processamento em segundo plano**
+
+- **Eventos de domínio:** o acompanhamento registra o que aconteceu — iniciado, medição registrada, medição desfeita —, no passado e na ordem. Medição recusada não é fato, e reler o acompanhamento do banco não faz nada acontecer de novo.
+- **Caixa de saída na mesma transação** que grava o agregado: nenhum fato se perde entre gravar e publicar, nenhum se publica sem ter sido gravado, e a ordem dos fatos fica na sequência da caixa. Um catálogo, com tipo e formato numerado, separa a mensagem publicada do evento.
+- **Processador em host próprio**, que reserva com `for update skip locked` — quantos processadores houver dividem a fila —, acorda pelo `LISTEN`/`NOTIFY` do PostgreSQL e olha a fila de tempos em tempos.
+- **Cada mensagem em nome da empresa dela.** A reserva é a única leitura entre empresas, por uma função que devolve só o id e a empresa; o resto passa pelo filtro e pela segurança por linha. As funções que atravessam empresas são só do papel do processador — a API não as alcança.
+- **Falha com espera crescente:** o que o tratador gravou é desfeito até um ponto de salvamento, e a mensagem volta em 30 segundos, um minuto, dois… até uma hora. Na décima falha, é abandonada com o erro guardado. Só o host parando interrompe o tratamento.
+- **Painel das obras** como projeção: refeito do estado do acompanhamento, igual se a mensagem chega duas vezes ou fora de ordem, e nunca de volta a uma versão mais velha. A situação da obra vem do pior índice: em dia, atenção ou crítica.
+- **Rotinas de limpeza:** chaves de idempotência com mais de 24 horas e mensagens tratadas há mais de 7 dias.
+
 ## Decisões
 
 As decisões que mudam o desenho do sistema estão registradas em [`docs/adr`](docs/adr):
@@ -361,6 +410,8 @@ As decisões que mudam o desenho do sistema estão registradas em [`docs/adr`](d
 - [ADR-0013](docs/adr/0013-isolamento-por-empresa-no-codigo-e-no-banco.md) — cada empresa só enxerga o que é dela: filtro no código e segurança por linha no banco, cada um testado sem o outro.
 - [ADR-0014](docs/adr/0014-idempotencia-na-mesma-transacao-da-criacao.md) — criação com chave de idempotência, reservada na mesma transação que grava o agregado; o banco põe os repetidos em fila.
 - [ADR-0015](docs/adr/0015-contrato-http.md) — o contrato HTTP: token com a empresa, política por papel, versão na ETag, erro em ProblemDetails.
+- [ADR-0016](docs/adr/0016-eventos-de-dominio.md) — eventos de domínio são fatos no passado, registrados pelo agregado e publicados pela persistência; reconstituir não é acontecer de novo.
+- [ADR-0017](docs/adr/0017-caixa-de-saida-e-processamento-em-segundo-plano.md) — caixa de saída na mesma transação do agregado, tratada em segundo plano em nome da empresa de cada mensagem; tratador idempotente, e o painel refeito do estado.
 
 E algumas que não precisaram de ADR:
 
@@ -380,15 +431,23 @@ E algumas que não precisaram de ADR:
   - **físico-financeiro** — fecha com o orçamento ao centavo, nas duas curvas, e põe cada real no mês em que o serviço acontece.
   - **valor agregado** — com glosas, meses pulados e obras fora do prazo: cada valor refeito a partir dos lançamentos, as etapas somando os itens, e o prazo agregado contando a mesma história do valor agregado.
 - **Persistência contra PostgreSQL de verdade**, num contêiner do Testcontainers: o esquema que as migrações criam e as restrições que o banco garante; obras sorteadas que vão ao `jsonb` e voltam calculando o mesmo; a versão que recusa quem grava por cima — dez gravações simultâneas, e passa uma —; e um documento estragado à mão no banco, recusado na leitura. Sem Docker, esses testes são pulados, com o motivo; no CI, falham.
-- **O formato do que se grava.** O JSON de cada agregado é comparado com o formato esperado; a leitura estrita recusa campo a mais, campo a menos, nulo, enum desconhecido, tipo de nó desconhecido e documento de outra versão; 400 obras sorteadas fazem ida e volta pelo documento. E um teste sem banco falha se o modelo do EF Core mudar sem migração.
+- **O formato do que se grava.** O JSON de cada agregado é comparado com o formato esperado; a leitura estrita recusa campo a mais, campo a menos, nulo, enum desconhecido, tipo de nó desconhecido e documento de outra versão; 400 obras sorteadas fazem ida e volta pelo documento. E um teste sem banco falha se o modelo do EF Core mudar sem migração, ou se uma tabela ficar sem o filtro da empresa.
 - **Isolamento entre empresas**, provado em cada camada sem a outra: o filtro do código com o banco conectado como superusuário, e a segurança por linha com o filtro desligado, com SQL à mão e com a conexão reaproveitada do pool.
+- **A caixa de saída e o processador contra o PostgreSQL:**
+  - **o agregado e as mensagens juntos** — um gatilho de teste faz o banco recusar a mensagem, e o agregado já gravado é desfeito; num conflito de versão, não fica nenhum dos dois —, e a ordem dos fatos na sequência da caixa;
+  - **cada mensagem tratada uma vez, em nome da empresa dela**, no código e no banco, e dois processadores ao mesmo tempo sem tratar nada duas vezes;
+  - **a falha**: o que o tratador gravou é desfeito; a espera dobra até a desistência; o tipo desconhecido espera uma versão que o conheça; o tempo esgotado num tratador conta como falha, e o host parando devolve a mensagem à fila sem contar falha;
+  - **o aviso de mensagem nova**, que chega quando a transação é confirmada e não chega quando ela é desfeita, e o host que sobrevive ao banco fora do ar;
+  - **as funções que atravessam empresas**: só elas rodam como o dono das tabelas, e só o papel do processador as executa;
+  - **o painel**, que não volta a uma versão mais velha, e as rotinas, que apagam o que venceu e nada mais.
+- **O catálogo de mensagens:** todo evento do domínio tem a sua mensagem, o formato publicado é conferido campo a campo, e o que esta versão não conhece é recusado.
 - **A API inteira, em memória, contra o PostgreSQL dos testes**, com tokens emitidos pelo próprio teste:
   - **o contrato de todo endpoint**, percorrendo os que a API mapeou — os de hoje e os que vierem: nenhum sem política, nenhuma alteração sem `If-Match`, nenhuma criação sem `Idempotency-Key`, e o documento OpenAPI descrevendo tudo isso;
   - **autenticação e autorização** — token de outra chave, vencido, de outro emissor, sem empresa — e o papel de cada recurso;
   - **concorrência e idempotência pelo HTTP**, com dez pedidos simultâneos: na alteração, passa um; na criação, cria-se um;
   - **os erros em ProblemDetails**, do 400 ao 428, e o erro interno que não diz nada além do `traceId`;
-  - **o exemplo deste README**, de ponta a ponta, sem mudar um centavo.
-- **Arquitetura.** O domínio só referencia a biblioteca padrão; toda classe pública é selada, estática ou abstrata; nenhuma propriedade tem `set` público — o estado só muda pelos métodos do domínio; todo agregado tem identidade própria; e só a infraestrutura e os testes do domínio enxergam os internos dele.
+  - **o exemplo deste README**, de ponta a ponta, sem mudar um centavo — até o painel das obras, pela caixa de saída e pelo processador.
+- **Arquitetura.** O domínio só referencia a biblioteca padrão; toda classe pública é selada, estática ou abstrata; nenhuma propriedade tem `set` público — o estado só muda pelos métodos do domínio; todo agregado tem identidade própria; todo evento de domínio é um record selado; e só a infraestrutura e os testes do domínio enxergam os internos dele.
 
 ## Como rodar
 
@@ -417,29 +476,41 @@ dotnet user-jwts create --project src/PlanejamentoObras.Api --role planejador --
 
 Em desenvolvimento, a API conecta como `postgres`, um superusuário, que passa por cima da segurança por linha — o filtro do código continua isolando as empresas. Em produção, ela conecta com um papel comum, que a segurança por linha alcança ([ADR-0013](docs/adr/0013-isolamento-por-empresa-no-codigo-e-no-banco.md)).
 
+O painel e as limpezas são do processador, que roda em outro processo:
+
+```bash
+dotnet run --project src/PlanejamentoObras.Processador
+```
+
+Ele também conecta como `postgres` em desenvolvimento. Em produção, tem um papel só dele: comum como o da API, e o único a quem se concede a execução das funções que atravessam empresas ([ADR-0017](docs/adr/0017-caixa-de-saida-e-processamento-em-segundo-plano.md)).
+
 ## Estrutura
 
 ```text
 src/PlanejamentoObras.Dominio/                  regras do negócio, sem dependências
-  Comum/                                        dinheiro, identificador e exceção de domínio
+  Comum/                                        dinheiro, identificador, exceção e evento de domínio
   Calendarios/                                  dias úteis e feriados
   Cronogramas/                                  rede, caminho crítico e programação
   Custos/                                       insumos, composições e custo unitário
   Orcamentos/                                   EAP, BDI, planilha e curva ABC
   FisicoFinanceiro/                             o orçamento distribuído nos meses
   LinhasDeBase/                                 o plano aprovado, congelado
-  Medicoes/                                     medições mensais e boletim de medição
-  ValorAgregado/                                desempenho de prazo e custo contra a linha de base
+  Medicoes/                                     medições mensais, boletim de medição e os fatos do acompanhamento
+  ValorAgregado/                                desempenho de prazo e custo contra a linha de base, e a situação da obra
 src/PlanejamentoObras.Infraestrutura/           persistência no PostgreSQL
   Documentos/                                   os agregados em JSON, e de volta
-  Persistencia/                                 contexto, migrações, repositórios, empresa e idempotência
+  Mensagens/                                    os eventos como mensagens da caixa de saída, e de volta
+  Persistencia/                                 contexto, migrações, repositórios, empresa, idempotência, caixa de saída e painel
 src/PlanejamentoObras.Api/                      a API REST
   Hospedagem/                                   serviços, pipeline e documento OpenAPI
   Http/                                         ETag e If-Match, idempotência, ProblemDetails
   Seguranca/                                    JWT, papéis, políticas e a empresa do token
-  Recursos/                                     um recurso por agregado, e as representações
+  Recursos/                                     um recurso por agregado, o painel, e as representações
+src/PlanejamentoObras.Processamento/            a fila da caixa de saída, os tratadores e as rotinas de limpeza
+src/PlanejamentoObras.Processador/              o host que roda o processamento, fora da API
 tests/PlanejamentoObras.Dominio.Testes/         exemplos, propriedades e o exemplo deste README
-tests/PlanejamentoObras.Infraestrutura.Testes/  documentos e repositórios, contra PostgreSQL de verdade
+tests/PlanejamentoObras.Infraestrutura.Testes/  documentos, repositórios e caixa de saída, contra PostgreSQL de verdade
+tests/PlanejamentoObras.Processamento.Testes/   o processador, o painel e as rotinas, contra PostgreSQL de verdade
 tests/PlanejamentoObras.Api.Testes/             a API em memória, contra PostgreSQL de verdade
 tests/PlanejamentoObras.Arquitetura.Testes/     regras que o domínio não pode quebrar
 docs/adr/                                       decisões de arquitetura

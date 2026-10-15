@@ -1,3 +1,6 @@
+using System.Net;
+using PlanejamentoObras.Api.Recursos.Painel;
+
 namespace PlanejamentoObras.Api.Testes;
 
 /// <summary>
@@ -30,4 +33,14 @@ internal static class Conferencias
 
     public static async Task<T> LerComSucesso<T>(this HttpClient cliente, string caminho) =>
         await (await cliente.GetAsync(caminho, Cancelamento).ComSucesso()).Ler<T>();
+
+    /// <summary>A linha da obra no painel — ou nada, se o processador ainda não chegou nela.</summary>
+    public static async Task<ObraNoPainelResposta?> LerDoPainel(this HttpClient cliente, Guid acompanhamento)
+    {
+        var pedido = cliente.GetAsync($"/api/painel/{acompanhamento}", Cancelamento);
+
+        return (await pedido).StatusCode == HttpStatusCode.NotFound
+            ? null
+            : await (await pedido.ComSucesso()).Ler<ObraNoPainelResposta>();
+    }
 }

@@ -2,20 +2,23 @@ using PlanejamentoObras.Api.Recursos.Acompanhamentos;
 using PlanejamentoObras.Api.Recursos.Custos;
 using PlanejamentoObras.Api.Recursos.LinhasDeBase;
 using PlanejamentoObras.Api.Recursos.Orcamentos;
+using PlanejamentoObras.Api.Recursos.Painel;
 using PlanejamentoObras.Api.Seguranca;
 using PlanejamentoObras.Dominio.Orcamentos;
+using PlanejamentoObras.Dominio.ValorAgregado;
 
 namespace PlanejamentoObras.Api.Testes;
 
 /*
  * O exemplo do README, de ponta a ponta, pela API — cada passo por quem tem
  * o papel para ele. O domínio já confere esses números; aqui se confere que
- * eles atravessam o HTTP, o JSON e o banco sem mudar um centavo.
+ * eles atravessam o HTTP, o JSON e o banco sem mudar um centavo — e chegam
+ * ao painel das obras pela caixa de saída e pelo processador.
  */
 public sealed class ExemploDoReadmePelaApiTests(ApiDeTestes api)
 {
     [Fact]
-    public async Task Da_base_de_custos_ao_valor_agregado_com_os_numeros_do_README()
+    public async Task Da_base_de_custos_ao_painel_das_obras_com_os_numeros_do_README()
     {
         var empresa = Guid.CreateVersion7();
         var orcamentista = api.Cliente(empresa, Papeis.Orcamentista);
@@ -92,5 +95,23 @@ public sealed class ExemploDoReadmePelaApiTests(ApiDeTestes api)
             (1.61m, 4.96m),
             (decimal.Round(analise.Prazo.PrazoAgregadoEmMeses, 2), decimal.Round(analise.Prazo.DuracaoEstimadaEmMeses!.Value, 2)));
         Assert.Equal(0.40m, decimal.Round(analise.Linhas.Single(linha => linha.Numero == "4").Indicadores.IndiceDeDesempenhoDePrazo!.Value, 2));
+
+        // E o painel das obras, quando o processador trata as mensagens das
+        // medições: a obra está crítica — o prazo decide.
+        ObraNoPainelResposta? noPainel = null;
+        await api.ProcessarAte(
+            async () => (noPainel = await gestor.LerDoPainel(acompanhamento))?.VersaoDoAcompanhamento == 3,
+            "a medição de novembro chegar ao painel");
+
+        Assert.Equal(
+            (SituacaoDaObra.Critica, "Linha de base 1 — contrato", (int?)2, (DateOnly?)new DateOnly(2026, 11, 1)),
+            (noPainel!.Situacao, noPainel.Obra, noPainel.Medicao, noPainel.Mes));
+        Assert.Equal(
+            (1_388_822.24m, (decimal?)563_875.75m, (decimal?)416_697.00m, (decimal?)432_700.00m, (decimal?)1_442_159.13m, (decimal?)-53_336.89m),
+            (noPainel.OrcamentoNoTermino, noPainel.ValorPlanejado, noPainel.ValorAgregado, noPainel.CustoReal, noPainel.EstimativaNoTermino, noPainel.VariacaoNoTermino));
+        Assert.Equal(
+            (0.74m, 0.96m),
+            (decimal.Round(noPainel.IndiceDeDesempenhoDePrazo!.Value, 2), decimal.Round(noPainel.IndiceDeDesempenhoDeCusto!.Value, 2)));
+        Assert.Equal(noPainel, Assert.Single(await gestor.LerComSucesso<List<ObraNoPainelResposta>>("/api/painel")));
     }
 }
