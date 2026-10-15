@@ -1,0 +1,99 @@
+{
+  "nome": "Residencial Vista Serra",
+  "bdi": {
+    "parcelas": {
+      "administracaoCentral": 4,
+      "seguros": 0.4,
+      "riscos": 1.27,
+      "garantias": 0.4,
+      "despesasFinanceiras": 1.23,
+      "lucro": 7.4,
+      "tributos": 6.15
+    }
+  },
+  "etapas": [
+    {
+      "titulo": "Serviços preliminares",
+      "filhos": [
+        {
+          "tipo": "item",
+          "codigo": "LIMP",
+          "quantidade": 1250,
+          "atividade": "MOB",
+          "bdiDiferenciado": null
+        }
+      ]
+    },
+    {
+      "titulo": "Infraestrutura e estrutura",
+      "filhos": [
+        {
+          "tipo": "item",
+          "codigo": "FUND",
+          "quantidade": 1,
+          "atividade": "FUN",
+          "bdiDiferenciado": null
+        },
+        {
+          "tipo": "item",
+          "codigo": "ESTR",
+          "quantidade": 1,
+          "atividade": "EST",
+          "bdiDiferenciado": null
+        }
+      ]
+    },
+    {
+      "titulo": "Vedações e revestimentos",
+      "filhos": [
+        {
+          "tipo": "item",
+          "codigo": "ALV",
+          "quantidade": 2430.5,
+          "atividade": "ALV",
+          "bdiDiferenciado": null
+        },
+        {
+          "tipo": "item",
+          "codigo": "REB",
+          "quantidade": 4861,
+          "atividade": "REB",
+          "bdiDiferenciado": null
+        }
+      ]
+    },
+    {
+      "titulo": "Instalações e acabamentos",
+      "filhos": [
+        {
+          "tipo": "item",
+          "codigo": "ELET",
+          "quantidade": 1,
+          "atividade": "ELE",
+          "bdiDiferenciado": null
+        },
+        {
+          "tipo": "item",
+          "codigo": "PINT",
+          "quantidade": 1,
+          "atividade": "PIN",
+          "bdiDiferenciado": null
+        }
+      ]
+    },
+    {
+      "titulo": "Equipamentos",
+      "filhos": [
+        {
+          "tipo": "item",
+          "codigo": "ELV",
+          "quantidade": 2,
+          "atividade": "ENT",
+          "bdiDiferenciado": {
+            "percentual": 12
+          }
+        }
+      ]
+    }
+  ]
+}

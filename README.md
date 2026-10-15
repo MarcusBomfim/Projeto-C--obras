@@ -1,10 +1,11 @@
 # Planejamento e Controle de Obras
 
 [![CI](https://github.com/MarcusBomfim/Projeto-C--obras/actions/workflows/ci.yml/badge.svg)](https://github.com/MarcusBomfim/Projeto-C--obras/actions/workflows/ci.yml)
+[![Ponta a ponta](https://github.com/MarcusBomfim/Projeto-C--obras/actions/workflows/e2e.yml/badge.svg)](https://github.com/MarcusBomfim/Projeto-C--obras/actions/workflows/e2e.yml)
 
-Planejamento e controle de obra como o engenheiro de planejamento faz: rede de precedências e caminho crítico, orçamento com composições de custo e BDI, o cronograma físico-financeiro que junta os dois — e a obra medida mês a mês contra o plano aprovado, com boletim de medição, valor agregado e um painel das obras que se atualiza em segundo plano a cada medição.
+Planejamento e controle de obra como o engenheiro de planejamento faz: rede de precedências e caminho crítico, orçamento com composições de custo e BDI, o cronograma físico-financeiro que junta os dois — e a obra medida mês a mês contra o plano aprovado, com boletim de medição, valor agregado e um painel das obras que se atualiza em segundo plano a cada medição. Pela API ou no navegador, com o Gantt e a curva S.
 
-C# 14 · .NET 10 · ASP.NET Core 10 · EF Core 10 · PostgreSQL 17 · Testcontainers · xUnit v3 · GitHub Actions
+C# 14 · .NET 10 · ASP.NET Core 10 · EF Core 10 · PostgreSQL 17 · React 19 · TypeScript · Vite · TanStack Query · Testcontainers · xUnit v3 · Vitest · Playwright · GitHub Actions
 
 ## O problema
 
@@ -316,6 +317,22 @@ A situação é a do pior índice: abaixo de 0,85, a obra está crítica; abaixo
 
 A mensagem que falha volta mais tarde — 30 segundos, depois um minuto, dois, até uma hora —, e o que o tratador gravou antes de falhar é desfeito. Na décima falha, a fila desiste e guarda o erro para alguém ver. Dois processadores dividem a fila sem tratar a mesma mensagem duas vezes.
 
+### No navegador
+
+O mesmo exemplo, nas telas. No painel, a obra do README aparece crítica, ao lado de outras duas para comparar — uma em dia e uma ainda sem medição. O painel se atualiza sozinho:
+
+![O painel das obras: a do README crítica, uma em dia e uma ainda sem medição](docs/imagens/painel.png)
+
+A obra aberta, com os indicadores, a curva S e o valor agregado de cada etapa e item — instalações e acabamentos, com IDP de 0,40, é quem mais segura:
+
+![A obra do README: indicadores de prazo e custo, curva S e a tabela por etapa e item](docs/imagens/obra.png)
+
+E o cronograma em Gantt, programado com os feriados do README: o caminho crítico em vermelho, a folga de três dias das instalações elétricas, o marco da entrega e os dias em que não se trabalha:
+
+![O Gantt do cronograma do README, com o caminho crítico, a folga e os dias não úteis](docs/imagens/gantt.png)
+
+Cada gráfico tem ao lado a tabela dos seus números, e a situação da obra é escrita, não só colorida. Os tipos do front-end saem do contrato da API, versionado em [`docs/api/openapi.json`](docs/api/openapi.json): se a API mudar e o front-end não, o CI acusa ([ADR-0018](docs/adr/0018-front-end-tipado-pelo-contrato-da-api.md)).
+
 ## Roteiro
 
 O projeto é construído em partes, cada uma entregue funcionando, testada e documentada.
@@ -328,7 +345,7 @@ O projeto é construído em partes, cada uma entregue funcionando, testada e doc
 | 4 | Persistência com EF Core e PostgreSQL, testes de integração com Testcontainers | ✅ |
 | 5 | API REST: JWT, autorização por política, multi-tenant, ProblemDetails, idempotência e concorrência otimista | ✅ |
 | 6 | Eventos de domínio, outbox e processamento em segundo plano | ✅ |
-| 7 | Front-end em React: Gantt com caminho crítico, curva S e painel de valor agregado | |
+| 7 | Front-end em React: Gantt com caminho crítico, curva S e painel de valor agregado | ✅ |
 | 8 | Observabilidade com OpenTelemetry, Docker e entrega contínua | |
 
 ## O que já está pronto
@@ -378,7 +395,7 @@ O projeto é construído em partes, cada uma entregue funcionando, testada e doc
 - **Concorrência otimista pelo HTTP:** a versão na ETag; `If-Match` obrigatório em toda alteração — 428 sem ele, 412 com uma versão velha —; `If-None-Match` dá 304.
 - **Idempotência na criação:** `Idempotency-Key` obrigatória, reservada na mesma transação que grava o agregado; a repetição devolve a resposta original, e repetições simultâneas criam um só.
 - **Erros em ProblemDetails** (RFC 9457), de um catálogo documentado, em português, com o `traceId`; erro interno não vaza o detalhe.
-- **JSON estrito na entrada:** campo que falta, campo a mais, nulo onde não cabe e enum em número dão 400, dizendo qual.
+- **JSON estrito na entrada:** campo que falta, campo a mais, nulo onde não cabe, enum em número e número em texto dão 400, dizendo qual.
 - **Documento OpenAPI** com o esquema de autenticação e os cabeçalhos que cada endpoint exige.
 
 **Parte 6 — eventos e processamento em segundo plano**
@@ -390,6 +407,16 @@ O projeto é construído em partes, cada uma entregue funcionando, testada e doc
 - **Falha com espera crescente:** o que o tratador gravou é desfeito até um ponto de salvamento, e a mensagem volta em 30 segundos, um minuto, dois… até uma hora. Na décima falha, é abandonada com o erro guardado. Só o host parando interrompe o tratamento.
 - **Painel das obras** como projeção: refeito do estado do acompanhamento, igual se a mensagem chega duas vezes ou fora de ordem, e nunca de volta a uma versão mais velha. A situação da obra vem do pior índice: em dia, atenção ou crítica.
 - **Rotinas de limpeza:** chaves de idempotência com mais de 24 horas e mensagens tratadas há mais de 7 dias.
+
+**Parte 7 — front-end**
+
+- **Painel das obras:** cada obra com a situação, os índices de prazo e custo e a estimativa no término, a que pede ação primeiro. Atualiza sozinho a cada 30 segundos, e ao voltar para a aba.
+- **A obra:** os indicadores — com o prazo agregado e a duração estimada —, a curva S de valor planejado, valor agregado e custo real, e o valor agregado de cada etapa e item.
+- **Gantt com caminho crítico:** as datas cedo, a folga total até as datas tarde, os marcos, os vínculos — os críticos em destaque — e os dias não úteis. O calendário da programação — início, feriados, sábado útil — fica no endereço da página: o link mostra a mesma programação.
+- **Tipado pelo contrato da API.** O documento OpenAPI fica no repositório, e os tipos do front-end são gerados dele: a API mudou e o contrato não, falha o teste da API; o contrato mudou e os tipos não, falha o CI do front-end. Para o contrato dizer de cada número que ele é um número, a API passou a recusar número escrito em texto.
+- **Sessão com o token do provedor de identidade**, guardada na aba: quem entrou, até quando, e o motivo quando a sessão acaba. Trocar de sessão esvazia o cache — o que uma empresa leu não aparece para a próxima.
+- **Gráficos em SVG feitos à mão**, com a geometria em funções puras, e cada um com a tabela dos seus números ao lado, para leitor de tela. A situação é sempre escrita, nunca só cor.
+- **Cada área se registra sozinha**, com as suas rotas e a entrada no menu, como os recursos da API.
 
 ## Decisões
 
@@ -412,6 +439,7 @@ As decisões que mudam o desenho do sistema estão registradas em [`docs/adr`](d
 - [ADR-0015](docs/adr/0015-contrato-http.md) — o contrato HTTP: token com a empresa, política por papel, versão na ETag, erro em ProblemDetails.
 - [ADR-0016](docs/adr/0016-eventos-de-dominio.md) — eventos de domínio são fatos no passado, registrados pelo agregado e publicados pela persistência; reconstituir não é acontecer de novo.
 - [ADR-0017](docs/adr/0017-caixa-de-saida-e-processamento-em-segundo-plano.md) — caixa de saída na mesma transação do agregado, tratada em segundo plano em nome da empresa de cada mensagem; tratador idempotente, e o painel refeito do estado.
+- [ADR-0018](docs/adr/0018-front-end-tipado-pelo-contrato-da-api.md) — o front-end tipado pelo contrato da API, versionado no repositório; o que vem da API no cache, e não num estado global; gráficos em SVG com a tabela ao lado.
 
 E algumas que não precisaram de ADR:
 
@@ -446,7 +474,13 @@ E algumas que não precisaram de ADR:
   - **autenticação e autorização** — token de outra chave, vencido, de outro emissor, sem empresa — e o papel de cada recurso;
   - **concorrência e idempotência pelo HTTP**, com dez pedidos simultâneos: na alteração, passa um; na criação, cria-se um;
   - **os erros em ProblemDetails**, do 400 ao 428, e o erro interno que não diz nada além do `traceId`;
+  - **o contrato publicado**: o documento OpenAPI que a API serve é o que está no repositório;
   - **o exemplo deste README**, de ponta a ponta, sem mudar um centavo — até o painel das obras, pela caixa de saída e pelo processador.
+- **O front-end com a aplicação inteira** (Vitest, Testing Library e MSW): as rotas, a sessão e o cache são os de verdade; só a API é de mentira, e ela recusa pedido que o teste não previu. As respostas são as reais da API para a obra do README. Estão cobertos:
+  - o painel e a ordem das obras, a obra com a curva S, e o Gantt com o calendário no endereço;
+  - a entrada e o token recusado pela API;
+  - a geometria dos gráficos, conferida em números.
+- **De ponta a ponta, no navegador** (Playwright). A obra do README é criada pela API numa empresa nova, com tokens assinados pelo próprio teste. No Chrome, o teste passa pelo painel, pela curva S e pelo Gantt. E uma medição nova chega ao painel já aberto, pela caixa de saída e pelo processador, sem recarregar a página.
 - **Arquitetura.** O domínio só referencia a biblioteca padrão; toda classe pública é selada, estática ou abstrata; nenhuma propriedade tem `set` público — o estado só muda pelos métodos do domínio; todo agregado tem identidade própria; todo evento de domínio é um record selado; e só a infraestrutura e os testes do domínio enxergam os internos dele.
 
 ## Como rodar
@@ -484,6 +518,27 @@ dotnet run --project src/PlanejamentoObras.Processador
 
 Ele também conecta como `postgres` em desenvolvimento. Em produção, tem um papel só dele: comum como o da API, e o único a quem se concede a execução das funções que atravessam empresas ([ADR-0017](docs/adr/0017-caixa-de-saida-e-processamento-em-segundo-plano.md)).
 
+O front-end precisa do [Node.js 24](https://nodejs.org). Com a API no ar, ele abre em `http://localhost:5180` e pede o token — o do `dotnet user-jwts`, com os papéis e a empresa que quiser. O Vite repassa `/api` para a API, e os dois ficam na mesma origem:
+
+```bash
+npm ci --prefix web
+npm --prefix web run dev
+```
+
+Os testes do front-end não precisam da API:
+
+```bash
+npm --prefix web run teste
+```
+
+Os de ponta a ponta compilam e sobem a pilha inteira — a API, o processador e o front-end de produção — contra um PostgreSQL próprio, na porta 55433, e abrem o Google Chrome instalado:
+
+```bash
+docker run -d --name planejamento-obras-e2e -e POSTGRES_PASSWORD=postgres -p 55433:5432 postgres:17.6-alpine
+npm ci --prefix e2e
+npm --prefix e2e run teste
+```
+
 ## Estrutura
 
 ```text
@@ -513,6 +568,13 @@ tests/PlanejamentoObras.Infraestrutura.Testes/  documentos, repositórios e caix
 tests/PlanejamentoObras.Processamento.Testes/   o processador, o painel e as rotinas, contra PostgreSQL de verdade
 tests/PlanejamentoObras.Api.Testes/             a API em memória, contra PostgreSQL de verdade
 tests/PlanejamentoObras.Arquitetura.Testes/     regras que o domínio não pode quebrar
+web/                                            o front-end: React, TypeScript e Vite
+  src/aplicacao/                                a moldura, as áreas e o cache das consultas
+  src/api/                                      o cliente HTTP e os tipos gerados do contrato
+  src/sessao/                                   a entrada e o token
+  src/painel/, src/obras/, src/cronogramas/     as telas: o painel, a obra e o Gantt
+e2e/                                            os testes de ponta a ponta, no navegador
 docs/adr/                                       decisões de arquitetura
-docs/api/                                       o catálogo de problemas da API
+docs/api/                                       o contrato OpenAPI e o catálogo de problemas da API
+docs/imagens/                                   as telas deste README
 ```

@@ -1,0 +1,172 @@
+{
+  "nome": "Tabela própria — setembro de 2026",
+  "dataBase": "2026-09-01",
+  "insumos": [
+    {
+      "codigo": "CIM",
+      "descricao": "Cimento Portland CP II-32",
+      "unidade": "kg",
+      "tipo": "Material",
+      "preco": 0.78
+    },
+    {
+      "codigo": "CAL",
+      "descricao": "Cal hidratada CH-III",
+      "unidade": "kg",
+      "tipo": "Material",
+      "preco": 1.05
+    },
+    {
+      "codigo": "ARE",
+      "descricao": "Areia média lavada",
+      "unidade": "m³",
+      "tipo": "Material",
+      "preco": 120
+    },
+    {
+      "codigo": "BLO",
+      "descricao": "Bloco cerâmico de vedação 9x19x19 cm",
+      "unidade": "un",
+      "tipo": "Material",
+      "preco": 1.32
+    },
+    {
+      "codigo": "PED",
+      "descricao": "Pedreiro, com encargos sociais",
+      "unidade": "h",
+      "tipo": "MaoDeObra",
+      "preco": 28.74
+    },
+    {
+      "codigo": "SER",
+      "descricao": "Servente, com encargos sociais",
+      "unidade": "h",
+      "tipo": "MaoDeObra",
+      "preco": 21.46
+    },
+    {
+      "codigo": "BET",
+      "descricao": "Betoneira 400 L, custo horário produtivo",
+      "unidade": "h",
+      "tipo": "Equipamento",
+      "preco": 1.9
+    },
+    {
+      "codigo": "FUND",
+      "descricao": "Fundações: estacas, blocos e vigas baldrame",
+      "unidade": "vb",
+      "tipo": "Material",
+      "preco": 98500
+    },
+    {
+      "codigo": "ESTR",
+      "descricao": "Estrutura de concreto armado",
+      "unidade": "vb",
+      "tipo": "Material",
+      "preco": 412000
+    },
+    {
+      "codigo": "ELET",
+      "descricao": "Instalações elétricas",
+      "unidade": "vb",
+      "tipo": "Material",
+      "preco": 86300
+    },
+    {
+      "codigo": "PINT",
+      "descricao": "Pintura interna e externa",
+      "unidade": "vb",
+      "tipo": "Material",
+      "preco": 64200
+    },
+    {
+      "codigo": "ELV",
+      "descricao": "Elevador de passageiros, 8 pessoas, fornecido e instalado",
+      "unidade": "un",
+      "tipo": "Equipamento",
+      "preco": 180000
+    }
+  ],
+  "composicoes": [
+    {
+      "codigo": "ALV",
+      "descricao": "Alvenaria de vedação com bloco cerâmico 9x19x19 cm",
+      "unidade": "m²",
+      "itens": [
+        {
+          "codigo": "BLO",
+          "coeficiente": 13.5
+        },
+        {
+          "codigo": "ARG",
+          "coeficiente": 0.012
+        },
+        {
+          "codigo": "PED",
+          "coeficiente": 0.8
+        },
+        {
+          "codigo": "SER",
+          "coeficiente": 0.4
+        }
+      ]
+    },
+    {
+      "codigo": "ARG",
+      "descricao": "Argamassa de assentamento, traço 1:2:8, preparo mecânico",
+      "unidade": "m³",
+      "itens": [
+        {
+          "codigo": "CIM",
+          "coeficiente": 180
+        },
+        {
+          "codigo": "CAL",
+          "coeficiente": 150
+        },
+        {
+          "codigo": "ARE",
+          "coeficiente": 1.1
+        },
+        {
+          "codigo": "SER",
+          "coeficiente": 10
+        },
+        {
+          "codigo": "BET",
+          "coeficiente": 0.82
+        }
+      ]
+    },
+    {
+      "codigo": "LIMP",
+      "descricao": "Limpeza manual do terreno",
+      "unidade": "m²",
+      "itens": [
+        {
+          "codigo": "SER",
+          "coeficiente": 0.15
+        }
+      ]
+    },
+    {
+      "codigo": "REB",
+      "descricao": "Emboço de parede, argamassa 1:2:8, 2 cm",
+      "unidade": "m²",
+      "itens": [
+        {
+          "codigo": "ARG",
+          "coeficiente": 0.025
+        },
+        {
+          "codigo": "PED",
+          "coeficiente": 0.6
+        },
+        {
+          "codigo": "SER",
+          "coeficiente": 0.6
+        }
+      ]
+    }
+  ]
+}

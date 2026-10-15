@@ -1,0 +1,20 @@
+{
+  "mes": "2026-10-30",
+  "lancamentos": [
+    {
+      "item": "1.1",
+      "quantidade": 1250,
+      "custoReal": 4300
+    },
+    {
+      "item": "2.1",
+      "quantidade": 1,
+      "custoReal": 104900
+    },
+    {
+      "item": "2.2",
+      "quantidade": 0.15,
+      "custoReal": 63000
+    }
+  ]
+}
