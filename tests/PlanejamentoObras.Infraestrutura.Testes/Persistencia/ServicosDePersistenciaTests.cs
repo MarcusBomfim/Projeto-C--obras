@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using PlanejamentoObras.Infraestrutura.Persistencia;
 using PlanejamentoObras.Infraestrutura.Persistencia.Idempotencia;
+using PlanejamentoObras.Infraestrutura.Persistencia.Painel;
 using PlanejamentoObras.Infraestrutura.Persistencia.Repositorios;
 
 namespace PlanejamentoObras.Infraestrutura.Testes.Persistencia;
@@ -10,7 +11,7 @@ public sealed class ServicosDePersistenciaTests
     private const string Conexao = "Host=localhost;Database=planejamento_obras";
 
     [Fact]
-    public void Registra_o_contexto_os_repositorios_e_as_chaves_um_por_escopo()
+    public void Registra_o_contexto_os_repositorios_as_chaves_e_o_painel_um_por_escopo()
     {
         // Montar não abre conexão: dá para conferir sem banco.
         using var provedor = new ServiceCollection()
@@ -26,6 +27,7 @@ public sealed class ServicosDePersistenciaTests
         Assert.NotNull(servicos.GetRequiredService<RepositorioDeLinhasDeBase>());
         Assert.NotNull(servicos.GetRequiredService<RepositorioDeAcompanhamentos>());
         Assert.NotNull(servicos.GetRequiredService<ChavesDeIdempotencia>());
+        Assert.NotNull(servicos.GetRequiredService<ConsultaDoPainel>());
         Assert.Same(servicos.GetRequiredService<ContextoDoBanco>(), servicos.GetRequiredService<ContextoDoBanco>());
         Assert.Same(TimeProvider.System, servicos.GetRequiredService<TimeProvider>());
     }

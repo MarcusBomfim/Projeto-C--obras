@@ -35,25 +35,38 @@ public sealed class RepositorioDeAcompanhamentos(ContextoDoBanco contexto, TimeP
         return new(_tabela.Abrir(registro, lido => lido.ParaAcompanhamento(lida)), registro.Versao);
     }
 
-    /// <remarks>A linha de base precisa estar gravada antes.</remarks>
-    public Task<int> Adicionar(Acompanhamento acompanhamento, CancellationToken cancelamento = default)
+    /// <remarks>
+    /// A linha de base precisa estar gravada antes. Os fatos do acompanhamento
+    /// vão para a caixa de saída junto com ele, e saem dele depois de gravados
+    /// (ADR-0017).
+    /// </remarks>
+    public async Task<int> Adicionar(Acompanhamento acompanhamento, CancellationToken cancelamento = default)
     {
         ArgumentNullException.ThrowIfNull(acompanhamento);
 
-        return _tabela.Inserir(
+        var versao = await _tabela.Inserir(
             RegistroDeAcompanhamento.De(acompanhamento, versao: 1, _tabela.Agora),
             cancelamento,
-            semReferencia: $"A linha de base {acompanhamento.LinhaDeBase.Id} não está gravada: grave-a antes do acompanhamento.");
+            semReferencia: $"A linha de base {acompanhamento.LinhaDeBase.Id} não está gravada: grave-a antes do acompanhamento.",
+            eventos: acompanhamento.Eventos);
+
+        acompanhamento.DescartarEventos();
+
+        return versao;
     }
 
-    public Task<int> Atualizar(Acompanhamento acompanhamento, int versaoLida, CancellationToken cancelamento = default)
+    public async Task<int> Atualizar(Acompanhamento acompanhamento, int versaoLida, CancellationToken cancelamento = default)
     {
         ArgumentNullException.ThrowIfNull(acompanhamento);
 
         // A linha de base de um acompanhamento não muda; só o documento.
         var novo = RegistroDeAcompanhamento.De(acompanhamento, versaoLida + 1, _tabela.Agora);
 
-        return _tabela.Atualizar(novo, versaoLida, outrasColunas: null, cancelamento);
+        var versao = await _tabela.Atualizar(novo, versaoLida, outrasColunas: null, cancelamento, acompanhamento.Eventos);
+
+        acompanhamento.DescartarEventos();
+
+        return versao;
     }
 
     public Task Remover(AcompanhamentoId id, int versaoLida, CancellationToken cancelamento = default)

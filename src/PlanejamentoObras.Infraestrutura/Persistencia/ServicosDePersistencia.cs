@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using PlanejamentoObras.Infraestrutura.Persistencia.Idempotencia;
+using PlanejamentoObras.Infraestrutura.Persistencia.Painel;
 using PlanejamentoObras.Infraestrutura.Persistencia.Repositorios;
 
 namespace PlanejamentoObras.Infraestrutura.Persistencia;
@@ -9,8 +10,9 @@ namespace PlanejamentoObras.Infraestrutura.Persistencia;
 public static class ServicosDePersistencia
 {
     /// <summary>
-    /// O contexto, os repositórios e as chaves de idempotência, um por
-    /// requisição; o relógio do sistema, se ninguém tiver registrado outro.
+    /// O contexto, os repositórios, as chaves de idempotência e a leitura do
+    /// painel, um por requisição; o relógio do sistema, se ninguém tiver
+    /// registrado outro.
     /// </summary>
     /// <typeparam name="TEmpresa">
     /// De onde vem a empresa de cada requisição — na API, do token de quem
@@ -32,6 +34,7 @@ public static class ServicosDePersistencia
         servicos.AddScoped<RepositorioDeLinhasDeBase>();
         servicos.AddScoped<RepositorioDeAcompanhamentos>();
         servicos.AddScoped<ChavesDeIdempotencia>();
+        servicos.AddScoped<ConsultaDoPainel>();
 
         return servicos;
     }

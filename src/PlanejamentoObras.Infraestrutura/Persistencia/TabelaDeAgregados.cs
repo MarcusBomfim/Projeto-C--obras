@@ -1,8 +1,10 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
+using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
 using PlanejamentoObras.Dominio.Comum;
+using PlanejamentoObras.Infraestrutura.Persistencia.CaixaDeSaida;
 using PlanejamentoObras.Infraestrutura.Persistencia.Registros;
 
 namespace PlanejamentoObras.Infraestrutura.Persistencia;
@@ -50,9 +52,21 @@ internal sealed class TabelaDeAgregados<TRegistro>(ContextoDoBanco contexto, Tim
     }
 
     /// <param name="semReferencia">A mensagem, se o registro apontar para um agregado que não está gravado.</param>
-    public async Task<int> Inserir(TRegistro registro, CancellationToken cancelamento, string? semReferencia = null)
+    /// <param name="eventos">
+    /// Os fatos do agregado desde a última gravação: vão para a caixa de saída
+    /// na mesma transação que grava o agregado (ADR-0017).
+    /// </param>
+    public async Task<int> Inserir(
+        TRegistro registro,
+        CancellationToken cancelamento,
+        string? semReferencia = null,
+        IReadOnlyList<EventoDeDominio>? eventos = null)
     {
         registro.EmpresaId = contexto.EmpresaQueGrava;
+        var mensagens = Mensagens(eventos, registro.Versao);
+
+        await using var transacao = await TransacaoParaAsMensagens(mensagens, cancelamento);
+
         Registros.Add(registro);
 
         try
@@ -72,16 +86,29 @@ internal sealed class TabelaDeAgregados<TRegistro>(ContextoDoBanco contexto, Tim
             contexto.ChangeTracker.Clear();
         }
 
+        await GravarNaCaixa(mensagens, cancelamento);
+
+        if (transacao is not null)
+        {
+            await transacao.CommitAsync(cancelamento);
+        }
+
         return registro.Versao;
     }
 
     /// <param name="outrasColunas">As colunas próprias da tabela, além das que toda tabela de agregado tem.</param>
+    /// <param name="eventos">Os fatos do agregado desde a última gravação, para a caixa de saída (ADR-0017).</param>
     public async Task<int> Atualizar(
         TRegistro novo,
         int versaoLida,
         Action<UpdateSettersBuilder<TRegistro>>? outrasColunas,
-        CancellationToken cancelamento)
+        CancellationToken cancelamento,
+        IReadOnlyList<EventoDeDominio>? eventos = null)
     {
+        var mensagens = Mensagens(eventos, novo.Versao);
+
+        await using var transacao = await TransacaoParaAsMensagens(mensagens, cancelamento);
+
         var alteradas = await Registros
             .Where(registro => registro.Id == novo.Id && registro.Versao == versaoLida)
             .ExecuteUpdateAsync(
@@ -102,7 +129,49 @@ internal sealed class TabelaDeAgregados<TRegistro>(ContextoDoBanco contexto, Tim
             await AcusarConflitoOuAusencia(novo.Id, versaoLida, cancelamento);
         }
 
+        await GravarNaCaixa(mensagens, cancelamento);
+
+        if (transacao is not null)
+        {
+            await transacao.CommitAsync(cancelamento);
+        }
+
         return novo.Versao;
+    }
+
+    private List<RegistroDeMensagem> Mensagens(IReadOnlyList<EventoDeDominio>? eventos, int versaoDoAgregado) =>
+        [.. (eventos ?? []).Select(evento => RegistroDeMensagem.De(evento, contexto.EmpresaQueGrava, versaoDoAgregado, Agora))];
+
+    /// <summary>
+    /// O agregado e as mensagens dele numa transação só: ou ficam os dois, ou
+    /// nenhum — num conflito de versão, nem um nem outro. Sem mensagem, ou
+    /// dentro da transação de quem chamou, não precisa abrir outra.
+    /// </summary>
+    private async Task<IDbContextTransaction?> TransacaoParaAsMensagens(List<RegistroDeMensagem> mensagens, CancellationToken cancelamento) =>
+        mensagens.Count > 0 && contexto.Database.CurrentTransaction is null
+            ? await contexto.Database.BeginTransactionAsync(cancelamento)
+            : null;
+
+    /// <summary>
+    /// As mensagens entram uma a uma, na ordem dos fatos: a sequência da caixa
+    /// é a ordem em que eles aconteceram. Todas num SaveChanges só, não — o
+    /// Entity Framework ordena as inserções pela chave, e a chave de duas
+    /// mensagens do mesmo milissegundo sai em ordem qualquer.
+    /// </summary>
+    private async Task GravarNaCaixa(List<RegistroDeMensagem> mensagens, CancellationToken cancelamento)
+    {
+        try
+        {
+            foreach (var mensagem in mensagens)
+            {
+                contexto.CaixaDeSaida.Add(mensagem);
+                await contexto.SaveChangesAsync(cancelamento);
+            }
+        }
+        finally
+        {
+            contexto.ChangeTracker.Clear();
+        }
     }
 
     /// <param name="emUso">A mensagem, se outro agregado depender deste.</param>

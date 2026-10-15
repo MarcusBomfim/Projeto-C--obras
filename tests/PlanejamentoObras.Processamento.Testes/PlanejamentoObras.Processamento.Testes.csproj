@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <RootNamespace>PlanejamentoObras.Processamento.Testes</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="xunit.v3.mtp-v2" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\PlanejamentoObras.Processamento\PlanejamentoObras.Processamento.csproj" />
+  </ItemGroup>
+  <!--
+    O mesmo banco dos testes da infraestrutura, com o papel do processador, e
+    a obra pequena dos testes do domínio.
+  -->
+  <ItemGroup>
+    <Compile Include="..\PlanejamentoObras.Infraestrutura.Testes\Persistencia\BancoDeTestes.cs" Link="Banco\BancoDeTestes.cs" />
+    <Compile Include="..\PlanejamentoObras.Dominio.Testes\FisicoFinanceiro\CasaTerrea.cs" Link="Geradores\CasaTerrea.cs" />
+  </ItemGroup>
+</Project>

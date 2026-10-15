@@ -23,6 +23,91 @@ namespace PlanejamentoObras.Infraestrutura.Persistencia.Migracoes
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("PlanejamentoObras.Infraestrutura.Persistencia.CaixaDeSaida.RegistroDeMensagem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("AbandonadaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("abandonada_em");
+
+                    b.Property<Guid>("AgregadoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agregado_id");
+
+                    b.Property<string>("Conteudo")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("conteudo");
+
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
+                    b.Property<short>("Formato")
+                        .HasColumnType("smallint")
+                        .HasColumnName("formato");
+
+                    b.Property<DateTimeOffset>("OcorridaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ocorrida_em");
+
+                    b.Property<DateTimeOffset>("ProximaTentativaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("proxima_tentativa_em");
+
+                    b.Property<long>("Sequencia")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("sequencia");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<long>("Sequencia"));
+
+                    b.Property<int>("Tentativas")
+                        .HasColumnType("integer")
+                        .HasColumnName("tentativas");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("tipo");
+
+                    b.Property<DateTimeOffset?>("TratadaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("tratada_em");
+
+                    b.Property<string>("UltimoErro")
+                        .HasColumnType("text")
+                        .HasColumnName("ultimo_erro");
+
+                    b.Property<int>("VersaoDoAgregado")
+                        .HasColumnType("integer")
+                        .HasColumnName("versao_do_agregado");
+
+                    b.HasKey("Id")
+                        .HasName("pk_caixa_de_saida");
+
+                    b.HasIndex("TratadaEm")
+                        .HasDatabaseName("ix_caixa_de_saida_tratada_em")
+                        .HasFilter("tratada_em is not null");
+
+                    b.HasIndex("ProximaTentativaEm", "Sequencia")
+                        .HasDatabaseName("ix_caixa_de_saida_pendentes")
+                        .HasFilter("tratada_em is null and abandonada_em is null");
+
+                    b.ToTable("caixa_de_saida", "planejamento", t =>
+                        {
+                            t.HasCheckConstraint("ck_caixa_de_saida_conteudo", "jsonb_typeof(conteudo) = 'object'");
+
+                            t.HasCheckConstraint("ck_caixa_de_saida_formato", "formato >= 1");
+
+                            t.HasCheckConstraint("ck_caixa_de_saida_tentativas", "tentativas >= 0");
+                        });
+                });
+
             modelBuilder.Entity("PlanejamentoObras.Infraestrutura.Persistencia.Idempotencia.RegistroDeIdempotencia", b =>
                 {
                     b.Property<Guid>("EmpresaId")
@@ -64,6 +149,104 @@ namespace PlanejamentoObras.Infraestrutura.Persistencia.Migracoes
                         });
                 });
 
+            modelBuilder.Entity("PlanejamentoObras.Infraestrutura.Persistencia.Painel.RegistroDoPainel", b =>
+                {
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
+                    b.Property<Guid>("AcompanhamentoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("acompanhamento_id");
+
+                    b.Property<DateTimeOffset>("AtualizadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("atualizado_em");
+
+                    b.Property<decimal?>("CustoReal")
+                        .HasColumnType("numeric")
+                        .HasColumnName("custo_real");
+
+                    b.Property<decimal?>("DuracaoEstimadaEmMeses")
+                        .HasColumnType("numeric")
+                        .HasColumnName("duracao_estimada_em_meses");
+
+                    b.Property<int>("DuracaoPlanejadaEmMeses")
+                        .HasColumnType("integer")
+                        .HasColumnName("duracao_planejada_em_meses");
+
+                    b.Property<decimal?>("EstimativaNoTermino")
+                        .HasColumnType("numeric")
+                        .HasColumnName("estimativa_no_termino");
+
+                    b.Property<decimal?>("IndiceDeDesempenhoDeCusto")
+                        .HasColumnType("numeric")
+                        .HasColumnName("indice_de_desempenho_de_custo");
+
+                    b.Property<decimal?>("IndiceDeDesempenhoDePrazo")
+                        .HasColumnType("numeric")
+                        .HasColumnName("indice_de_desempenho_de_prazo");
+
+                    b.Property<Guid>("LinhaDeBaseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("linha_de_base_id");
+
+                    b.Property<int?>("Medicao")
+                        .HasColumnType("integer")
+                        .HasColumnName("medicao");
+
+                    b.Property<DateOnly?>("Mes")
+                        .HasColumnType("date")
+                        .HasColumnName("mes");
+
+                    b.Property<string>("Obra")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("obra");
+
+                    b.Property<decimal>("OrcamentoNoTermino")
+                        .HasColumnType("numeric")
+                        .HasColumnName("orcamento_no_termino");
+
+                    b.Property<decimal?>("PrazoAgregadoEmMeses")
+                        .HasColumnType("numeric")
+                        .HasColumnName("prazo_agregado_em_meses");
+
+                    b.Property<string>("Situacao")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("situacao");
+
+                    b.Property<decimal?>("ValorAgregado")
+                        .HasColumnType("numeric")
+                        .HasColumnName("valor_agregado");
+
+                    b.Property<decimal?>("ValorPlanejado")
+                        .HasColumnType("numeric")
+                        .HasColumnName("valor_planejado");
+
+                    b.Property<decimal?>("VariacaoNoTermino")
+                        .HasColumnType("numeric")
+                        .HasColumnName("variacao_no_termino");
+
+                    b.Property<int>("VersaoDoAcompanhamento")
+                        .HasColumnType("integer")
+                        .HasColumnName("versao_do_acompanhamento");
+
+                    b.HasKey("EmpresaId", "AcompanhamentoId")
+                        .HasName("pk_painel_das_obras");
+
+                    b.HasIndex("EmpresaId", "Obra")
+                        .HasDatabaseName("ix_painel_das_obras_empresa_id_obra");
+
+                    b.ToTable("painel_das_obras", "planejamento", t =>
+                        {
+                            t.HasCheckConstraint("ck_painel_das_obras_situacao", "situacao in ('SemMedicao', 'EmDia', 'Atencao', 'Critica')");
+                        });
+                });
+
             modelBuilder.Entity("PlanejamentoObras.Infraestrutura.Persistencia.Registros.RegistroDeAcompanhamento", b =>
                 {
                     b.Property<Guid>("Id")
@@ -102,6 +285,9 @@ namespace PlanejamentoObras.Infraestrutura.Persistencia.Migracoes
 
                     b.HasKey("Id")
                         .HasName("pk_acompanhamentos");
+
+                    b.HasAlternateKey("EmpresaId", "Id")
+                        .HasName("ak_acompanhamentos_empresa_id_id");
 
                     b.HasIndex("EmpresaId", "LinhaDeBaseId")
                         .HasDatabaseName("ix_acompanhamentos_empresa_id_linha_de_base_id");
@@ -341,6 +527,17 @@ namespace PlanejamentoObras.Infraestrutura.Persistencia.Migracoes
 
                             t.HasCheckConstraint("ck_orcamentos_versao", "versao >= 1");
                         });
+                });
+
+            modelBuilder.Entity("PlanejamentoObras.Infraestrutura.Persistencia.Painel.RegistroDoPainel", b =>
+                {
+                    b.HasOne("PlanejamentoObras.Infraestrutura.Persistencia.Registros.RegistroDeAcompanhamento", null)
+                        .WithMany()
+                        .HasForeignKey("EmpresaId", "AcompanhamentoId")
+                        .HasPrincipalKey("EmpresaId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_painel_das_obras_acompanhamentos");
                 });
 
             modelBuilder.Entity("PlanejamentoObras.Infraestrutura.Persistencia.Registros.RegistroDeAcompanhamento", b =>

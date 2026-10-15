@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using PlanejamentoObras.Infraestrutura.Persistencia.CaixaDeSaida;
 using PlanejamentoObras.Infraestrutura.Persistencia.Idempotencia;
+using PlanejamentoObras.Infraestrutura.Persistencia.Painel;
 using PlanejamentoObras.Infraestrutura.Persistencia.Registros;
 
 namespace PlanejamentoObras.Infraestrutura.Persistencia;
@@ -46,6 +48,10 @@ public sealed class ContextoDoBanco(DbContextOptions<ContextoDoBanco> opcoes, IE
     internal DbSet<RegistroDeAcompanhamento> Acompanhamentos => Set<RegistroDeAcompanhamento>();
 
     internal DbSet<RegistroDeIdempotencia> ChavesDeIdempotencia => Set<RegistroDeIdempotencia>();
+
+    internal DbSet<RegistroDeMensagem> CaixaDeSaida => Set<RegistroDeMensagem>();
+
+    internal DbSet<RegistroDoPainel> Paineis => Set<RegistroDoPainel>();
 
     /// <summary>A empresa em nome de quem este contexto lê e grava; <see langword="null"/> se nenhuma.</summary>
     internal Guid? EmpresaId => empresa.Id;
@@ -116,7 +122,14 @@ public sealed class ContextoDoBanco(DbContextOptions<ContextoDoBanco> opcoes, IE
             .HasConstraintName("fk_acompanhamentos_linhas_de_base")
             .OnDelete(DeleteBehavior.Restrict);
 
+        // A chave que a referência do painel usa, como a da linha de base.
+        acompanhamentos
+            .HasAlternateKey(registro => new { registro.EmpresaId, registro.Id })
+            .HasName("ak_acompanhamentos_empresa_id_id");
+
         MapearChavesDeIdempotencia(modelBuilder);
+        MapearCaixaDeSaida(modelBuilder);
+        MapearPainel(modelBuilder);
     }
 
     /// <summary>As colunas que toda tabela de agregado tem, e o filtro pela empresa.</summary>
@@ -172,5 +185,92 @@ public sealed class ContextoDoBanco(DbContextOptions<ContextoDoBanco> opcoes, IE
         chaves.Property(registro => registro.CriadaEm).HasColumnName("criada_em");
 
         chaves.HasQueryFilter(FiltroDaEmpresa, registro => registro.EmpresaId == EmpresaId);
+    }
+
+    /// <summary>A caixa de saída: os eventos publicados, esperando tratamento (ADR-0017).</summary>
+    private void MapearCaixaDeSaida(ModelBuilder modelBuilder)
+    {
+        var mensagens = modelBuilder.Entity<RegistroDeMensagem>();
+
+        mensagens.ToTable("caixa_de_saida", tabelaBuilder =>
+        {
+            tabelaBuilder.HasCheckConstraint("ck_caixa_de_saida_formato", "formato >= 1");
+            tabelaBuilder.HasCheckConstraint("ck_caixa_de_saida_tentativas", "tentativas >= 0");
+            tabelaBuilder.HasCheckConstraint("ck_caixa_de_saida_conteudo", "jsonb_typeof(conteudo) = 'object'");
+        });
+
+        mensagens.HasKey(registro => registro.Id).HasName("pk_caixa_de_saida");
+        mensagens.Property(registro => registro.Id).HasColumnName("id").ValueGeneratedNever();
+        mensagens.Property(registro => registro.Sequencia).HasColumnName("sequencia").UseIdentityAlwaysColumn();
+        mensagens.Property(registro => registro.EmpresaId).HasColumnName("empresa_id");
+        mensagens.Property(registro => registro.Tipo).HasColumnName("tipo").HasMaxLength(100);
+        mensagens.Property(registro => registro.Formato).HasColumnName("formato");
+        mensagens.Property(registro => registro.Conteudo).HasColumnName("conteudo").HasColumnType("jsonb");
+        mensagens.Property(registro => registro.AgregadoId).HasColumnName("agregado_id");
+        mensagens.Property(registro => registro.VersaoDoAgregado).HasColumnName("versao_do_agregado");
+        mensagens.Property(registro => registro.OcorridaEm).HasColumnName("ocorrida_em");
+        mensagens.Property(registro => registro.Tentativas).HasColumnName("tentativas");
+        mensagens.Property(registro => registro.ProximaTentativaEm).HasColumnName("proxima_tentativa_em");
+        mensagens.Property(registro => registro.TratadaEm).HasColumnName("tratada_em");
+        mensagens.Property(registro => registro.AbandonadaEm).HasColumnName("abandonada_em");
+        mensagens.Property(registro => registro.UltimoErro).HasColumnName("ultimo_erro");
+
+        // A fila só olha o que está pendente: o índice só tem isso.
+        mensagens
+            .HasIndex(registro => new { registro.ProximaTentativaEm, registro.Sequencia })
+            .HasDatabaseName("ix_caixa_de_saida_pendentes")
+            .HasFilter("tratada_em is null and abandonada_em is null");
+        mensagens
+            .HasIndex(registro => registro.TratadaEm)
+            .HasDatabaseName("ix_caixa_de_saida_tratada_em")
+            .HasFilter("tratada_em is not null");
+
+        mensagens.HasQueryFilter(FiltroDaEmpresa, registro => registro.EmpresaId == EmpresaId);
+    }
+
+    /// <summary>O painel das obras: uma linha por acompanhamento, refeita a cada fato dele (ADR-0017).</summary>
+    private void MapearPainel(ModelBuilder modelBuilder)
+    {
+        var painel = modelBuilder.Entity<RegistroDoPainel>();
+
+        painel.ToTable("painel_das_obras", tabelaBuilder =>
+            tabelaBuilder.HasCheckConstraint(
+                "ck_painel_das_obras_situacao",
+                "situacao in ('SemMedicao', 'EmDia', 'Atencao', 'Critica')"));
+
+        painel.HasKey(registro => new { registro.EmpresaId, registro.AcompanhamentoId }).HasName("pk_painel_das_obras");
+        painel.Property(registro => registro.AcompanhamentoId).HasColumnName("acompanhamento_id").ValueGeneratedNever();
+        painel.Property(registro => registro.EmpresaId).HasColumnName("empresa_id");
+        painel.Property(registro => registro.LinhaDeBaseId).HasColumnName("linha_de_base_id");
+        painel.Property(registro => registro.Obra).HasColumnName("obra").HasMaxLength(160);
+        painel.Property(registro => registro.Situacao).HasColumnName("situacao").HasConversion<string>().HasMaxLength(20);
+        painel.Property(registro => registro.Medicao).HasColumnName("medicao");
+        painel.Property(registro => registro.Mes).HasColumnName("mes");
+        painel.Property(registro => registro.OrcamentoNoTermino).HasColumnName("orcamento_no_termino");
+        painel.Property(registro => registro.ValorPlanejado).HasColumnName("valor_planejado");
+        painel.Property(registro => registro.ValorAgregado).HasColumnName("valor_agregado");
+        painel.Property(registro => registro.CustoReal).HasColumnName("custo_real");
+        painel.Property(registro => registro.IndiceDeDesempenhoDePrazo).HasColumnName("indice_de_desempenho_de_prazo");
+        painel.Property(registro => registro.IndiceDeDesempenhoDeCusto).HasColumnName("indice_de_desempenho_de_custo");
+        painel.Property(registro => registro.EstimativaNoTermino).HasColumnName("estimativa_no_termino");
+        painel.Property(registro => registro.VariacaoNoTermino).HasColumnName("variacao_no_termino");
+        painel.Property(registro => registro.DuracaoPlanejadaEmMeses).HasColumnName("duracao_planejada_em_meses");
+        painel.Property(registro => registro.PrazoAgregadoEmMeses).HasColumnName("prazo_agregado_em_meses");
+        painel.Property(registro => registro.DuracaoEstimadaEmMeses).HasColumnName("duracao_estimada_em_meses");
+        painel.Property(registro => registro.VersaoDoAcompanhamento).HasColumnName("versao_do_acompanhamento");
+        painel.Property(registro => registro.AtualizadoEm).HasColumnName("atualizado_em");
+
+        painel.HasIndex(registro => new { registro.EmpresaId, registro.Obra }).HasDatabaseName("ix_painel_das_obras_empresa_id_obra");
+
+        // Saiu o acompanhamento, sai a linha dele: o painel não mostra obra que não existe mais.
+        painel
+            .HasOne<RegistroDeAcompanhamento>()
+            .WithMany()
+            .HasForeignKey(registro => new { registro.EmpresaId, registro.AcompanhamentoId })
+            .HasPrincipalKey(acompanhamento => new { acompanhamento.EmpresaId, acompanhamento.Id })
+            .HasConstraintName("fk_painel_das_obras_acompanhamentos")
+            .OnDelete(DeleteBehavior.Cascade);
+
+        painel.HasQueryFilter(FiltroDaEmpresa, registro => registro.EmpresaId == EmpresaId);
     }
 }

@@ -19,10 +19,12 @@ namespace PlanejamentoObras.Infraestrutura.Testes.Persistencia;
 /// códigos de erro que ele devolve (ADR-0011).
 /// </para>
 /// <para>
-/// Duas conexões. A do dono do banco, superusuário, aplica as migrações e
+/// Três conexões. A do dono do banco, superusuário, aplica as migrações e
 /// serve aos testes que examinam o banco por dentro. A da aplicação usa um
 /// papel comum, como em produção: é ela que a segurança por linha alcança
-/// (ADR-0013).
+/// (ADR-0013). A do processador também é comum, e é a única que executa as
+/// funções que atravessam empresas — reservar mensagens, limpar o que
+/// venceu (ADR-0017).
 /// </para>
 /// <para>
 /// Sem Docker na máquina de quem desenvolve, os testes que precisam do banco
@@ -41,11 +43,18 @@ public sealed class BancoDeTestes : IAsyncLifetime
 
     private const string SenhaDaAplicacao = "aplicacao-nos-testes";
 
+    /// <summary>O papel do processador: como o da aplicação, e mais as funções da fila e da limpeza.</summary>
+    public const string PapelDoProcessador = "planejamento_processador";
+
+    private const string SenhaDoProcessador = "processador-nos-testes";
+
     private PostgreSqlContainer? _conteiner;
 
     private string? _conexao;
 
     private string? _conexaoDaAplicacao;
+
+    private string? _conexaoDoProcessador;
 
     private string? _indisponivel;
 
@@ -73,13 +82,10 @@ public sealed class BancoDeTestes : IAsyncLifetime
             await contexto.Database.MigrateAsync();
         }
 
-        await CriarPapelDaAplicacao(_conexao);
+        await CriarPapeis(_conexao);
 
-        _conexaoDaAplicacao = new NpgsqlConnectionStringBuilder(_conexao)
-        {
-            Username = PapelDaAplicacao,
-            Password = SenhaDaAplicacao,
-        }.ConnectionString;
+        _conexaoDoProcessador = ConexaoComo(PapelDoProcessador, SenhaDoProcessador);
+        _conexaoDaAplicacao = ConexaoComo(PapelDaAplicacao, SenhaDaAplicacao);
     }
 
     public async ValueTask DisposeAsync()
@@ -118,21 +124,42 @@ public sealed class BancoDeTestes : IAsyncLifetime
         }
     }
 
+    /// <summary>A conexão do processador: a da aplicação, e mais as funções que atravessam empresas.</summary>
+    public string ConexaoDoProcessador
+    {
+        get
+        {
+            Assert.SkipWhen(_conexaoDoProcessador is null, _indisponivel ?? "O banco de testes não subiu.");
+
+            return _conexaoDoProcessador!;
+        }
+    }
+
     /// <summary>Um contexto novo em nome da empresa, como cada requisição da aplicação terá o seu.</summary>
     public ContextoDoBanco NovoContexto(Guid empresa) => ContextoDoBanco.Criar(ConexaoDaAplicacao, new EmpresaFixa(empresa));
 
     /// <summary>Um contexto em nome de nenhuma empresa: não lê nem grava agregado.</summary>
     public ContextoDoBanco NovoContextoSemEmpresa() => ContextoDoBanco.Criar(ConexaoDaAplicacao, EmpresaFixa.Nenhuma);
 
-    private static async Task CriarPapelDaAplicacao(string conexaoDoDono)
+    private string ConexaoComo(string papel, string senha) =>
+        new NpgsqlConnectionStringBuilder(_conexao) { Username = papel, Password = senha }.ConnectionString;
+
+    /// <summary>Os papéis como quem implanta os criaria: as tabelas para os dois, as funções só para o processador.</summary>
+    private static async Task CriarPapeis(string conexaoDoDono)
     {
         await using var conexao = new NpgsqlConnection(conexaoDoDono);
         await conexao.OpenAsync();
         await using var comando = new NpgsqlCommand(
             $"""
             create role {PapelDaAplicacao} login password '{SenhaDaAplicacao}';
-            grant usage on schema planejamento to {PapelDaAplicacao};
-            grant select, insert, update, delete on all tables in schema planejamento to {PapelDaAplicacao};
+            create role {PapelDoProcessador} login password '{SenhaDoProcessador}';
+            grant usage on schema planejamento to {PapelDaAplicacao}, {PapelDoProcessador};
+            grant select, insert, update, delete on all tables in schema planejamento to {PapelDaAplicacao}, {PapelDoProcessador};
+            grant execute on function
+                planejamento.reservar_mensagens(integer, timestamptz),
+                planejamento.apagar_mensagens_tratadas_antes_de(timestamptz),
+                planejamento.apagar_chaves_de_idempotencia_antes_de(timestamptz)
+                to {PapelDoProcessador};
             """,
             conexao);
         await comando.ExecuteNonQueryAsync();
