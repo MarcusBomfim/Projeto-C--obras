@@ -1,0 +1,273 @@
+import type { Esquemas } from '../api/cliente';
+
+/*
+ * O cronograma do exemplo do README, programado a partir de 05/10/2026 com
+ * os feriados do README, como a API o devolveu de verdade. Tipado pelo
+ * contrato, como os outros exemplos.
+ */
+
+export const cronogramasDoReadme: Esquemas['ResumoResposta'][] = [
+  {
+    id: '01a14062-8644-7013-bc54-fed39cfa0d4a',
+    nome: 'Residencial Vista Serra',
+    versao: 1,
+    atualizadoEm: '2026-10-15T16:26:01.1642+00:00',
+  },
+];
+
+export const cronogramaDoReadme: Esquemas['CronogramaResposta'] = {
+  id: '01a14062-8644-7013-bc54-fed39cfa0d4a',
+  nome: 'Residencial Vista Serra',
+  atividades: [
+    {
+      codigo: 'MOB',
+      descricao: 'Mobilização do canteiro',
+      duracaoEmDiasUteis: 5,
+      ehMarco: false,
+    },
+    {
+      codigo: 'FUN',
+      descricao: 'Fundações',
+      duracaoEmDiasUteis: 10,
+      ehMarco: false,
+    },
+    {
+      codigo: 'EST',
+      descricao: 'Estrutura',
+      duracaoEmDiasUteis: 20,
+      ehMarco: false,
+    },
+    {
+      codigo: 'ALV',
+      descricao: 'Alvenaria',
+      duracaoEmDiasUteis: 15,
+      ehMarco: false,
+    },
+    {
+      codigo: 'ELE',
+      descricao: 'Instalações elétricas',
+      duracaoEmDiasUteis: 12,
+      ehMarco: false,
+    },
+    {
+      codigo: 'REB',
+      descricao: 'Reboco',
+      duracaoEmDiasUteis: 8,
+      ehMarco: false,
+    },
+    {
+      codigo: 'PIN',
+      descricao: 'Pintura',
+      duracaoEmDiasUteis: 6,
+      ehMarco: false,
+    },
+    {
+      codigo: 'ENT',
+      descricao: 'Entrega das chaves',
+      duracaoEmDiasUteis: 0,
+      ehMarco: true,
+    },
+  ],
+  dependencias: [
+    {
+      predecessora: 'MOB',
+      sucessora: 'FUN',
+      tipo: 'TerminoInicio',
+      defasagemEmDiasUteis: 0,
+    },
+    {
+      predecessora: 'FUN',
+      sucessora: 'EST',
+      tipo: 'TerminoInicio',
+      defasagemEmDiasUteis: 0,
+    },
+    {
+      predecessora: 'EST',
+      sucessora: 'ALV',
+      tipo: 'TerminoInicio',
+      defasagemEmDiasUteis: 0,
+    },
+    {
+      predecessora: 'EST',
+      sucessora: 'ELE',
+      tipo: 'TerminoInicio',
+      defasagemEmDiasUteis: 0,
+    },
+    {
+      predecessora: 'ALV',
+      sucessora: 'REB',
+      tipo: 'TerminoInicio',
+      defasagemEmDiasUteis: 0,
+    },
+    {
+      predecessora: 'ELE',
+      sucessora: 'REB',
+      tipo: 'TerminoInicio',
+      defasagemEmDiasUteis: 0,
+    },
+    {
+      predecessora: 'REB',
+      sucessora: 'PIN',
+      tipo: 'TerminoInicio',
+      defasagemEmDiasUteis: 0,
+    },
+    {
+      predecessora: 'PIN',
+      sucessora: 'ENT',
+      tipo: 'TerminoInicio',
+      defasagemEmDiasUteis: 0,
+    },
+  ],
+};
+
+export const programacaoDoReadme: Esquemas['ProgramacaoResposta'] = {
+  dataDeInicio: '2026-10-05',
+  dataDeTermino: '2027-01-07',
+  duracaoEmDiasUteis: 64,
+  atividades: [
+    {
+      codigo: 'MOB',
+      descricao: 'Mobilização do canteiro',
+      duracaoEmDiasUteis: 5,
+      inicioCedo: '2026-10-05',
+      terminoCedo: '2026-10-09',
+      inicioTarde: '2026-10-05',
+      terminoTarde: '2026-10-09',
+      folgaTotal: 0,
+      folgaLivre: 0,
+      ehCritica: true,
+      ehMarco: false,
+    },
+    {
+      codigo: 'FUN',
+      descricao: 'Fundações',
+      duracaoEmDiasUteis: 10,
+      inicioCedo: '2026-10-13',
+      terminoCedo: '2026-10-26',
+      inicioTarde: '2026-10-13',
+      terminoTarde: '2026-10-26',
+      folgaTotal: 0,
+      folgaLivre: 0,
+      ehCritica: true,
+      ehMarco: false,
+    },
+    {
+      codigo: 'EST',
+      descricao: 'Estrutura',
+      duracaoEmDiasUteis: 20,
+      inicioCedo: '2026-10-27',
+      terminoCedo: '2026-11-25',
+      inicioTarde: '2026-10-27',
+      terminoTarde: '2026-11-25',
+      folgaTotal: 0,
+      folgaLivre: 0,
+      ehCritica: true,
+      ehMarco: false,
+    },
+    {
+      codigo: 'ALV',
+      descricao: 'Alvenaria',
+      duracaoEmDiasUteis: 15,
+      inicioCedo: '2026-11-26',
+      terminoCedo: '2026-12-16',
+      inicioTarde: '2026-11-26',
+      terminoTarde: '2026-12-16',
+      folgaTotal: 0,
+      folgaLivre: 0,
+      ehCritica: true,
+      ehMarco: false,
+    },
+    {
+      codigo: 'ELE',
+      descricao: 'Instalações elétricas',
+      duracaoEmDiasUteis: 12,
+      inicioCedo: '2026-11-26',
+      terminoCedo: '2026-12-11',
+      inicioTarde: '2026-12-01',
+      terminoTarde: '2026-12-16',
+      folgaTotal: 3,
+      folgaLivre: 3,
+      ehCritica: false,
+      ehMarco: false,
+    },
+    {
+      codigo: 'REB',
+      descricao: 'Reboco',
+      duracaoEmDiasUteis: 8,
+      inicioCedo: '2026-12-17',
+      terminoCedo: '2026-12-29',
+      inicioTarde: '2026-12-17',
+      terminoTarde: '2026-12-29',
+      folgaTotal: 0,
+      folgaLivre: 0,
+      ehCritica: true,
+      ehMarco: false,
+    },
+    {
+      codigo: 'PIN',
+      descricao: 'Pintura',
+      duracaoEmDiasUteis: 6,
+      inicioCedo: '2026-12-30',
+      terminoCedo: '2027-01-07',
+      inicioTarde: '2026-12-30',
+      terminoTarde: '2027-01-07',
+      folgaTotal: 0,
+      folgaLivre: 0,
+      ehCritica: true,
+      ehMarco: false,
+    },
+    {
+      codigo: 'ENT',
+      descricao: 'Entrega das chaves',
+      duracaoEmDiasUteis: 0,
+      inicioCedo: '2027-01-07',
+      terminoCedo: '2027-01-07',
+      inicioTarde: '2027-01-07',
+      terminoTarde: '2027-01-07',
+      folgaTotal: 0,
+      folgaLivre: 0,
+      ehCritica: true,
+      ehMarco: true,
+    },
+  ],
+  dependenciasCriticas: [
+    {
+      predecessora: 'MOB',
+      sucessora: 'FUN',
+      tipo: 'TerminoInicio',
+      defasagemEmDiasUteis: 0,
+    },
+    {
+      predecessora: 'FUN',
+      sucessora: 'EST',
+      tipo: 'TerminoInicio',
+      defasagemEmDiasUteis: 0,
+    },
+    {
+      predecessora: 'EST',
+      sucessora: 'ALV',
+      tipo: 'TerminoInicio',
+      defasagemEmDiasUteis: 0,
+    },
+    {
+      predecessora: 'ALV',
+      sucessora: 'REB',
+      tipo: 'TerminoInicio',
+      defasagemEmDiasUteis: 0,
+    },
+    {
+      predecessora: 'REB',
+      sucessora: 'PIN',
+      tipo: 'TerminoInicio',
+      defasagemEmDiasUteis: 0,
+    },
+    {
+      predecessora: 'PIN',
+      sucessora: 'ENT',
+      tipo: 'TerminoInicio',
+      defasagemEmDiasUteis: 0,
+    },
+  ],
+};
+
+export const FeriadosDoReadme = ['2026-10-12', '2026-11-02', '2026-11-20', '2026-12-25', '2027-01-01'];

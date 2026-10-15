@@ -1,0 +1,181 @@
+.figura {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  padding: 1.25rem;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  background: var(--superficie);
+}
+
+.legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  align-items: baseline;
+}
+
+.titulo {
+  font-weight: 700;
+}
+
+.legenda ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+
+.legenda li::before {
+  display: inline-block;
+  width: 1.1rem;
+  height: 0.7rem;
+  margin-right: 0.4rem;
+  border-radius: 2px;
+  vertical-align: middle;
+  content: '';
+}
+
+.legenda .amostraCritica::before {
+  background: var(--critica);
+}
+
+.legenda .amostraComFolga::before {
+  background: var(--destaque);
+}
+
+.legenda .amostraFolga::before {
+  height: 0.25rem;
+  background: var(--borda-forte);
+}
+
+.legenda .amostraMarco::before {
+  width: 0.7rem;
+  background: var(--texto);
+  transform: rotate(45deg) scale(0.8);
+}
+
+.legenda .amostraNaoUtil::before {
+  border: 1px solid var(--borda);
+  background: var(--fundo);
+}
+
+.legenda .amostraHoje::before {
+  height: 0;
+  border-top: 2px dashed var(--atencao);
+  border-radius: 0;
+}
+
+.rolagem {
+  overflow-x: auto;
+}
+
+.grafico {
+  display: block;
+}
+
+.faixa {
+  fill: var(--fundo);
+  opacity: 0.6;
+}
+
+.naoUtil {
+  fill: var(--fundo);
+}
+
+.divisao {
+  stroke: var(--borda-forte);
+}
+
+.mes {
+  fill: var(--texto);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dia {
+  fill: var(--texto-suave);
+  font-size: 11px;
+}
+
+.hoje {
+  stroke: var(--atencao);
+  stroke-dasharray: 3 3;
+  stroke-width: 2;
+}
+
+.codigo {
+  dominant-baseline: middle;
+  fill: var(--texto);
+  font-family: var(--fonte-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.descricao {
+  dominant-baseline: middle;
+  fill: var(--texto-suave);
+  font-size: 13px;
+}
+
+.barra,
+.barraCritica {
+  stroke-width: 0;
+}
+
+.barra {
+  fill: var(--destaque);
+}
+
+.barraCritica {
+  fill: var(--critica);
+}
+
+.folga {
+  fill: var(--borda-forte);
+}
+
+.marco {
+  fill: var(--texto);
+}
+
+.marcoCritico {
+  fill: var(--critica);
+}
+
+.ligacao,
+.ligacaoCritica {
+  fill: none;
+  stroke-width: 1.5;
+}
+
+.ligacao {
+  stroke: var(--texto-suave);
+}
+
+.ligacaoCritica {
+  stroke: var(--critica);
+}
+
+.seta {
+  fill: var(--texto-suave);
+}
+
+.setaCritica {
+  fill: var(--critica);
+}
+
+.tabela {
+  font-size: 0.9rem;
+}
+
+.tabela th[scope='row'] {
+  font-weight: 400;
+}
+
+.linhaCritica th[scope='row'] {
+  font-weight: 650;
+}

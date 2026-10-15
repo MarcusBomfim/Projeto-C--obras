@@ -1,0 +1,36 @@
+.lista {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lista li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  background: var(--superficie);
+}
+
+.lista a {
+  font-weight: 600;
+}
+
+.versao {
+  color: var(--texto-suave);
+  font-size: 0.85rem;
+}
+
+.vazio {
+  padding: 2rem;
+  border: 1px dashed var(--borda-forte);
+  border-radius: var(--raio);
+  color: var(--texto-suave);
+  text-align: center;
+}
