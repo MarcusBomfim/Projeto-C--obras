@@ -1,0 +1,16 @@
+.aviso {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--critica);
+  border-radius: var(--raio);
+  background: var(--critica-fundo);
+}
+
+.titulo {
+  margin: 0;
+  color: var(--critica);
+  font-weight: 600;
+}
+
+.detalhe {
+  margin: 0.25rem 0 0;
+}

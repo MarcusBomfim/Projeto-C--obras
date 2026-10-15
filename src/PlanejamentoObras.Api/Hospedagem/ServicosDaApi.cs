@@ -22,16 +22,18 @@ internal static class ServicosDaApi
 
         // JSON estrito, como a leitura dos documentos (ADR-0011): campo
         // obrigatório que falta, nulo onde não cabe, campo que o contrato não
-        // tem e enum em número são recusados — e não viram zero em silêncio.
-        // O discriminador de tipo, nos objetos que têm um, pode vir em
-        // qualquer posição: quem monta o JSON nem sempre controla a ordem das
-        // chaves.
+        // tem, enum em número e número em texto são recusados — e não viram
+        // zero em silêncio. Com isso o contrato publicado diz de cada número
+        // que ele é um número, e os tipos gerados dele também. O
+        // discriminador de tipo, nos objetos que têm um, pode vir em qualquer
+        // posição: quem monta o JSON nem sempre controla a ordem das chaves.
         builder.Services.ConfigureHttpJsonOptions(opcoes =>
         {
             var json = opcoes.SerializerOptions;
             json.RespectNullableAnnotations = true;
             json.RespectRequiredConstructorParameters = true;
             json.UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow;
+            json.NumberHandling = JsonNumberHandling.Strict;
             json.AllowOutOfOrderMetadataProperties = true;
             json.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false));
         });

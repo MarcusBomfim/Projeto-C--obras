@@ -1,0 +1,30 @@
+.resumo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  color: var(--texto-suave);
+  list-style: none;
+}
+
+.resumo strong {
+  color: var(--texto);
+}
+
+.obras {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(22rem, 100%), 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vazio {
+  padding: 2rem;
+  border: 1px dashed var(--borda-forte);
+  border-radius: var(--raio);
+  color: var(--texto-suave);
+  text-align: center;
+}

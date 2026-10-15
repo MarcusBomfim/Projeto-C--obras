@@ -1,0 +1,5024 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "Planejamento e Controle de Obras",
+    "description": "Cronogramas, custos, orçamentos, linhas de base e medições de obra. Toda chamada leva um JWT com a empresa de quem pede; os erros vêm em ProblemDetails (RFC 9457).",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/acompanhamentos": {
+      "post": {
+        "tags": [
+          "Acompanhamentos"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Um valor único por operação — um UUID —, repetido em cada nova tentativa. A repetição recebe a resposta da primeira vez.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovoAcompanhamento"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcompanhamentoResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/acompanhamentos/{id}": {
+      "get": {
+        "tags": [
+          "Acompanhamentos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcompanhamentoResposta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Acompanhamentos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/acompanhamentos/{id}/medicoes": {
+      "post": {
+        "tags": [
+          "Acompanhamentos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovaMedicao"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcompanhamentoResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/acompanhamentos/{id}/medicoes/{numero}": {
+      "delete": {
+        "tags": [
+          "Acompanhamentos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "numero",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcompanhamentoResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/acompanhamentos/{id}/boletins/{numero}": {
+      "get": {
+        "tags": [
+          "Acompanhamentos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "numero",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoletimResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/acompanhamentos/{id}/valor-agregado": {
+      "get": {
+        "tags": [
+          "Acompanhamentos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "mes",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValorAgregadoResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/linhas-de-base/{id}/acompanhamentos": {
+      "get": {
+        "tags": [
+          "Acompanhamentos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AcompanhamentoDaLinhaDeBase"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bases-de-custos": {
+      "get": {
+        "tags": [
+          "Bases de custos"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResumoResposta"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Bases de custos"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Um valor único por operação — um UUID —, repetido em cada nova tentativa. A repetição recebe a resposta da primeira vez.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovaBaseDeCustos"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseDeCustosResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bases-de-custos/{id}": {
+      "get": {
+        "tags": [
+          "Bases de custos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseDeCustosResposta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Bases de custos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlteracaoDaBaseDeCustos"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseDeCustosResposta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Bases de custos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/bases-de-custos/{id}/insumos": {
+      "post": {
+        "tags": [
+          "Bases de custos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovoInsumo"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseDeCustosResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bases-de-custos/{id}/insumos/{codigo}": {
+      "patch": {
+        "tags": [
+          "Bases de custos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "codigo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovoPreco"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseDeCustosResposta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Bases de custos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "codigo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseDeCustosResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bases-de-custos/{id}/composicoes": {
+      "post": {
+        "tags": [
+          "Bases de custos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovaComposicao"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseDeCustosResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bases-de-custos/{id}/composicoes/{codigo}": {
+      "get": {
+        "tags": [
+          "Bases de custos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "codigo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComposicaoAnaliticaResposta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Bases de custos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "codigo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseDeCustosResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bases-de-custos/{id}/composicoes/{codigo}/itens": {
+      "post": {
+        "tags": [
+          "Bases de custos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "codigo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovoItemDaComposicao"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseDeCustosResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bases-de-custos/{id}/composicoes/{codigo}/itens/{item}": {
+      "patch": {
+        "tags": [
+          "Bases de custos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "codigo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "item",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovoCoeficiente"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseDeCustosResposta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Bases de custos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "codigo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "item",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseDeCustosResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cronogramas": {
+      "get": {
+        "tags": [
+          "Cronogramas"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResumoResposta"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Cronogramas"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Um valor único por operação — um UUID —, repetido em cada nova tentativa. A repetição recebe a resposta da primeira vez.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovoCronograma"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CronogramaResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cronogramas/{id}": {
+      "get": {
+        "tags": [
+          "Cronogramas"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CronogramaResposta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Cronogramas"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovoNome"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CronogramaResposta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Cronogramas"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/cronogramas/{id}/atividades": {
+      "post": {
+        "tags": [
+          "Cronogramas"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovaAtividade"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CronogramaResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cronogramas/{id}/atividades/{codigo}": {
+      "patch": {
+        "tags": [
+          "Cronogramas"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "codigo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlteracaoDeAtividade"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CronogramaResposta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Cronogramas"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "codigo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CronogramaResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cronogramas/{id}/dependencias": {
+      "post": {
+        "tags": [
+          "Cronogramas"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovaDependencia"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CronogramaResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cronogramas/{id}/dependencias/{predecessora}/{sucessora}": {
+      "delete": {
+        "tags": [
+          "Cronogramas"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "predecessora",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sucessora",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CronogramaResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cronogramas/{id}/caminho-critico": {
+      "get": {
+        "tags": [
+          "Cronogramas"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaminhoCriticoResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cronogramas/{id}/programacao": {
+      "get": {
+        "tags": [
+          "Cronogramas"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "inicio",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "feriados",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "date"
+              }
+            }
+          },
+          {
+            "name": "sabadoUtil",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramacaoResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/linhas-de-base": {
+      "get": {
+        "tags": [
+          "Linhas de base"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResumoResposta"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Linhas de base"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Um valor único por operação — um UUID —, repetido em cada nova tentativa. A repetição recebe a resposta da primeira vez.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovaLinhaDeBase"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinhaDeBaseResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/linhas-de-base/{id}": {
+      "get": {
+        "tags": [
+          "Linhas de base"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinhaDeBaseResposta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Linhas de base"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/orcamentos": {
+      "get": {
+        "tags": [
+          "Orçamentos"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResumoResposta"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Orçamentos"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Um valor único por operação — um UUID —, repetido em cada nova tentativa. A repetição recebe a resposta da primeira vez.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovoOrcamento"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrcamentoResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orcamentos/{id}": {
+      "get": {
+        "tags": [
+          "Orçamentos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrcamentoResposta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Orçamentos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlteracaoDoOrcamento"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrcamentoResposta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Orçamentos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/orcamentos/{id}/etapas": {
+      "post": {
+        "tags": [
+          "Orçamentos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EtapaNaEap"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrcamentoResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orcamentos/{id}/etapas/{numero}": {
+      "patch": {
+        "tags": [
+          "Orçamentos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "numero",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovoTitulo"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrcamentoResposta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Orçamentos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "numero",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrcamentoResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orcamentos/{id}/itens": {
+      "post": {
+        "tags": [
+          "Orçamentos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ItemNaEap"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrcamentoResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orcamentos/{id}/itens/{numero}": {
+      "patch": {
+        "tags": [
+          "Orçamentos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "numero",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovaQuantidade"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrcamentoResposta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Orçamentos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "numero",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrcamentoResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orcamentos/{id}/itens/{numero}/atividade": {
+      "put": {
+        "tags": [
+          "Orçamentos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "numero",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AtividadeDoItem"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrcamentoResposta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Orçamentos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "numero",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrcamentoResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orcamentos/{id}/itens/{numero}/bdi": {
+      "put": {
+        "tags": [
+          "Orçamentos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "numero",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BdiDoOrcamento"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrcamentoResposta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Orçamentos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "numero",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "A versão lida — a ETag da leitura, como \"3\". Sem ela, 428; desatualizada, 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrcamentoResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orcamentos/{id}/planilha": {
+      "get": {
+        "tags": [
+          "Orçamentos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "baseDeCustos",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanilhaResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orcamentos/{id}/curva-abc": {
+      "get": {
+        "tags": [
+          "Orçamentos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "baseDeCustos",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ItemDaCurvaAbcResposta"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orcamentos/{id}/fisico-financeiro": {
+      "get": {
+        "tags": [
+          "Orçamentos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "baseDeCustos",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cronograma",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "inicio",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "feriados",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "date"
+              }
+            }
+          },
+          {
+            "name": "sabadoUtil",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "datas",
+            "in": "query",
+            "schema": {
+              "default": "Cedo",
+              "$ref": "#/components/schemas/DatasDoCronograma"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FisicoFinanceiroResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/painel": {
+      "get": {
+        "tags": [
+          "Painel"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ObraNoPainelResposta"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/painel/{acompanhamento}": {
+      "get": {
+        "tags": [
+          "Painel"
+        ],
+        "parameters": [
+          {
+            "name": "acompanhamento",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObraNoPainelResposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AcompanhamentoDaLinhaDeBase": {
+        "required": [
+          "id",
+          "versao"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "versao": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AcompanhamentoResposta": {
+        "required": [
+          "id",
+          "linhaDeBase",
+          "medicoes"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "linhaDeBase": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "medicoes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MedicaoResposta"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "AlteracaoDaBaseDeCustos": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dataBase": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AlteracaoDeAtividade": {
+        "type": "object",
+        "properties": {
+          "descricao": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "duracaoEmDiasUteis": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AlteracaoDoOrcamento": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bdi": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BdiDoOrcamento"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "AtividadeDoItem": {
+        "required": [
+          "atividade"
+        ],
+        "type": "object",
+        "properties": {
+          "atividade": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AtividadeProgramadaResposta": {
+        "required": [
+          "codigo",
+          "descricao",
+          "duracaoEmDiasUteis",
+          "inicioCedo",
+          "terminoCedo",
+          "inicioTarde",
+          "terminoTarde",
+          "folgaTotal",
+          "folgaLivre",
+          "ehCritica",
+          "ehMarco"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "duracaoEmDiasUteis": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "inicioCedo": {
+            "type": "string",
+            "format": "date"
+          },
+          "terminoCedo": {
+            "type": "string",
+            "format": "date"
+          },
+          "inicioTarde": {
+            "type": "string",
+            "format": "date"
+          },
+          "terminoTarde": {
+            "type": "string",
+            "format": "date"
+          },
+          "folgaTotal": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "folgaLivre": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "ehCritica": {
+            "type": "boolean"
+          },
+          "ehMarco": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AtividadeResposta": {
+        "required": [
+          "codigo",
+          "descricao",
+          "duracaoEmDiasUteis",
+          "ehMarco"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "duracaoEmDiasUteis": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "ehMarco": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BaseDeCustosResposta": {
+        "required": [
+          "id",
+          "nome",
+          "dataBase",
+          "insumos",
+          "composicoes"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "dataBase": {
+            "type": "string",
+            "format": "date"
+          },
+          "insumos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InsumoResposta"
+            }
+          },
+          "composicoes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComposicaoResposta"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "BdiDoOrcamento": {
+        "type": "object",
+        "properties": {
+          "percentual": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "parcelas": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ParcelasDoBdiDoOrcamento"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "BoletimResposta": {
+        "required": [
+          "numero",
+          "mes",
+          "valorContratado",
+          "valorAnterior",
+          "valorNoMes",
+          "valorAcumulado",
+          "saldo",
+          "percentualExecutado",
+          "linhas"
+        ],
+        "type": "object",
+        "properties": {
+          "numero": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "mes": {
+            "type": "string",
+            "format": "date"
+          },
+          "valorContratado": {
+            "type": "number",
+            "format": "double"
+          },
+          "valorAnterior": {
+            "type": "number",
+            "format": "double"
+          },
+          "valorNoMes": {
+            "type": "number",
+            "format": "double"
+          },
+          "valorAcumulado": {
+            "type": "number",
+            "format": "double"
+          },
+          "saldo": {
+            "type": "number",
+            "format": "double"
+          },
+          "percentualExecutado": {
+            "type": "number",
+            "format": "double"
+          },
+          "linhas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LinhaDoBoletimResposta"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "CaminhoCriticoResposta": {
+        "required": [
+          "duracaoEmDiasUteis",
+          "atividades",
+          "dependenciasCriticas"
+        ],
+        "type": "object",
+        "properties": {
+          "duracaoEmDiasUteis": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "atividades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TemposDaAtividadeResposta"
+            }
+          },
+          "dependenciasCriticas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DependenciaResposta"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ClasseAbc": {
+        "enum": [
+          "A",
+          "B",
+          "C"
+        ]
+      },
+      "ComposicaoAnaliticaResposta": {
+        "required": [
+          "codigo",
+          "descricao",
+          "unidade",
+          "custoUnitario",
+          "linhas"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "unidade": {
+            "type": "string"
+          },
+          "custoUnitario": {
+            "type": "number",
+            "format": "double"
+          },
+          "linhas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LinhaDaComposicaoResposta"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComposicaoResposta": {
+        "required": [
+          "codigo",
+          "descricao",
+          "unidade",
+          "itens"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "unidade": {
+            "type": "string"
+          },
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemDaComposicaoResposta"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "CronogramaResposta": {
+        "required": [
+          "id",
+          "nome",
+          "atividades",
+          "dependencias"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "atividades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AtividadeResposta"
+            }
+          },
+          "dependencias": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DependenciaResposta"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "DatasDoCronograma": {
+        "enum": [
+          "Cedo",
+          "Tarde"
+        ]
+      },
+      "DependenciaResposta": {
+        "required": [
+          "predecessora",
+          "sucessora",
+          "tipo",
+          "defasagemEmDiasUteis"
+        ],
+        "type": "object",
+        "properties": {
+          "predecessora": {
+            "type": "string"
+          },
+          "sucessora": {
+            "type": "string"
+          },
+          "tipo": {
+            "$ref": "#/components/schemas/TipoDeDependencia"
+          },
+          "defasagemEmDiasUteis": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "EtapaNaEap": {
+        "required": [
+          "titulo"
+        ],
+        "type": "object",
+        "properties": {
+          "titulo": {
+            "type": "string"
+          },
+          "dentroDe": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "EtapaResposta": {
+        "required": [
+          "titulo",
+          "filhos",
+          "numero"
+        ],
+        "type": "object",
+        "properties": {
+          "titulo": {
+            "type": "string"
+          },
+          "filhos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NoDaEapResposta"
+            }
+          },
+          "numero": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FisicoFinanceiroResposta": {
+        "required": [
+          "datas",
+          "total",
+          "periodos",
+          "linhas"
+        ],
+        "type": "object",
+        "properties": {
+          "datas": {
+            "$ref": "#/components/schemas/DatasDoCronograma"
+          },
+          "total": {
+            "type": "number",
+            "format": "double"
+          },
+          "periodos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PeriodoResposta"
+            }
+          },
+          "linhas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LinhaDoFisicoFinanceiroResposta"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "IndicadoresResposta": {
+        "required": [
+          "orcamentoNoTermino",
+          "valorPlanejado",
+          "valorAgregado",
+          "custoReal",
+          "variacaoDePrazo",
+          "variacaoDeCusto",
+          "indiceDeDesempenhoDePrazo",
+          "indiceDeDesempenhoDeCusto",
+          "percentualPlanejado",
+          "percentualExecutado",
+          "estimativaNoTermino",
+          "estimativaNoTerminoComRestanteNoOrcamento",
+          "estimativaNoTerminoComCustoEPrazo",
+          "estimativaParaTerminar",
+          "variacaoNoTermino",
+          "indiceDeDesempenhoParaTerminar"
+        ],
+        "type": "object",
+        "properties": {
+          "orcamentoNoTermino": {
+            "type": "number",
+            "format": "double"
+          },
+          "valorPlanejado": {
+            "type": "number",
+            "format": "double"
+          },
+          "valorAgregado": {
+            "type": "number",
+            "format": "double"
+          },
+          "custoReal": {
+            "type": "number",
+            "format": "double"
+          },
+          "variacaoDePrazo": {
+            "type": "number",
+            "format": "double"
+          },
+          "variacaoDeCusto": {
+            "type": "number",
+            "format": "double"
+          },
+          "indiceDeDesempenhoDePrazo": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "indiceDeDesempenhoDeCusto": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "percentualPlanejado": {
+            "type": "number",
+            "format": "double"
+          },
+          "percentualExecutado": {
+            "type": "number",
+            "format": "double"
+          },
+          "estimativaNoTermino": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "estimativaNoTerminoComRestanteNoOrcamento": {
+            "type": "number",
+            "format": "double"
+          },
+          "estimativaNoTerminoComCustoEPrazo": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "estimativaParaTerminar": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "variacaoNoTermino": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "indiceDeDesempenhoParaTerminar": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "InsumoResposta": {
+        "required": [
+          "codigo",
+          "descricao",
+          "unidade",
+          "tipo",
+          "preco"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "unidade": {
+            "type": "string"
+          },
+          "tipo": {
+            "$ref": "#/components/schemas/TipoDeInsumo"
+          },
+          "preco": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ItemDaComposicaoResposta": {
+        "required": [
+          "codigo",
+          "coeficiente"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "coeficiente": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ItemDaCurvaAbcResposta": {
+        "required": [
+          "numero",
+          "descricao",
+          "total",
+          "peso",
+          "pesoAcumulado",
+          "classe"
+        ],
+        "type": "object",
+        "properties": {
+          "numero": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "total": {
+            "type": "number",
+            "format": "double"
+          },
+          "peso": {
+            "type": "number",
+            "format": "double"
+          },
+          "pesoAcumulado": {
+            "type": "number",
+            "format": "double"
+          },
+          "classe": {
+            "$ref": "#/components/schemas/ClasseAbc"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ItemNaEap": {
+        "required": [
+          "dentroDe",
+          "codigo",
+          "quantidade"
+        ],
+        "type": "object",
+        "properties": {
+          "dentroDe": {
+            "type": "string"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "quantidade": {
+            "type": "number",
+            "format": "double"
+          },
+          "atividade": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bdiDiferenciado": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BdiDoOrcamento"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "LancamentoResposta": {
+        "required": [
+          "item",
+          "quantidade",
+          "custoReal"
+        ],
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "string"
+          },
+          "quantidade": {
+            "type": "number",
+            "format": "double"
+          },
+          "custoReal": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "LinhaDaComposicaoResposta": {
+        "required": [
+          "codigo",
+          "descricao",
+          "unidade",
+          "tipo",
+          "coeficiente",
+          "custoUnitario",
+          "custoParcial"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "unidade": {
+            "type": "string"
+          },
+          "tipo": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TipoDeInsumo"
+              }
+            ]
+          },
+          "coeficiente": {
+            "type": "number",
+            "format": "double"
+          },
+          "custoUnitario": {
+            "type": "number",
+            "format": "double"
+          },
+          "custoParcial": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "LinhaDaPlanilhaResposta": {
+        "required": [
+          "tipo"
+        ],
+        "type": "object",
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/LinhaDaPlanilhaRespostaEtapaDaPlanilhaResposta"
+          },
+          {
+            "$ref": "#/components/schemas/LinhaDaPlanilhaRespostaItemDaPlanilhaResposta"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "tipo",
+          "mapping": {
+            "etapa": "#/components/schemas/LinhaDaPlanilhaRespostaEtapaDaPlanilhaResposta",
+            "item": "#/components/schemas/LinhaDaPlanilhaRespostaItemDaPlanilhaResposta"
+          }
+        }
+      },
+      "LinhaDaPlanilhaRespostaEtapaDaPlanilhaResposta": {
+        "required": [
+          "numero",
+          "descricao",
+          "custoTotal",
+          "total",
+          "peso"
+        ],
+        "properties": {
+          "tipo": {
+            "enum": [
+              "etapa"
+            ],
+            "type": "string"
+          },
+          "numero": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "custoTotal": {
+            "type": "number",
+            "format": "double"
+          },
+          "total": {
+            "type": "number",
+            "format": "double"
+          },
+          "peso": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "LinhaDaPlanilhaRespostaItemDaPlanilhaResposta": {
+        "required": [
+          "codigo",
+          "unidade",
+          "quantidade",
+          "custoUnitario",
+          "bdi",
+          "precoUnitario",
+          "atividade",
+          "numero",
+          "descricao",
+          "custoTotal",
+          "total",
+          "peso"
+        ],
+        "properties": {
+          "tipo": {
+            "enum": [
+              "item"
+            ],
+            "type": "string"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "unidade": {
+            "type": "string"
+          },
+          "quantidade": {
+            "type": "number",
+            "format": "double"
+          },
+          "custoUnitario": {
+            "type": "number",
+            "format": "double"
+          },
+          "bdi": {
+            "type": "number",
+            "format": "double"
+          },
+          "precoUnitario": {
+            "type": "number",
+            "format": "double"
+          },
+          "atividade": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "numero": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "custoTotal": {
+            "type": "number",
+            "format": "double"
+          },
+          "total": {
+            "type": "number",
+            "format": "double"
+          },
+          "peso": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "LinhaDeBaseResposta": {
+        "required": [
+          "id",
+          "nome",
+          "aprovadaEm",
+          "datas",
+          "inicioPlanejado",
+          "terminoPlanejado",
+          "meses",
+          "total",
+          "custoTotal",
+          "linhas"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "aprovadaEm": {
+            "type": "string",
+            "format": "date"
+          },
+          "datas": {
+            "$ref": "#/components/schemas/DatasDoCronograma"
+          },
+          "inicioPlanejado": {
+            "type": "string",
+            "format": "date"
+          },
+          "terminoPlanejado": {
+            "type": "string",
+            "format": "date"
+          },
+          "meses": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          "total": {
+            "type": "number",
+            "format": "double"
+          },
+          "custoTotal": {
+            "type": "number",
+            "format": "double"
+          },
+          "linhas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LinhaPlanejadaResposta"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "LinhaDoBoletimResposta": {
+        "required": [
+          "tipo"
+        ],
+        "type": "object",
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/LinhaDoBoletimRespostaEtapaDoBoletimResposta"
+          },
+          {
+            "$ref": "#/components/schemas/LinhaDoBoletimRespostaItemDoBoletimResposta"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "tipo",
+          "mapping": {
+            "etapa": "#/components/schemas/LinhaDoBoletimRespostaEtapaDoBoletimResposta",
+            "item": "#/components/schemas/LinhaDoBoletimRespostaItemDoBoletimResposta"
+          }
+        }
+      },
+      "LinhaDoBoletimRespostaEtapaDoBoletimResposta": {
+        "required": [
+          "numero",
+          "descricao",
+          "valorContratado",
+          "valorAnterior",
+          "valorNoMes",
+          "valorAcumulado",
+          "saldo",
+          "percentualExecutado"
+        ],
+        "properties": {
+          "tipo": {
+            "enum": [
+              "etapa"
+            ],
+            "type": "string"
+          },
+          "numero": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "valorContratado": {
+            "type": "number",
+            "format": "double"
+          },
+          "valorAnterior": {
+            "type": "number",
+            "format": "double"
+          },
+          "valorNoMes": {
+            "type": "number",
+            "format": "double"
+          },
+          "valorAcumulado": {
+            "type": "number",
+            "format": "double"
+          },
+          "saldo": {
+            "type": "number",
+            "format": "double"
+          },
+          "percentualExecutado": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "LinhaDoBoletimRespostaItemDoBoletimResposta": {
+        "required": [
+          "unidade",
+          "precoUnitario",
+          "quantidadeContratada",
+          "quantidadeAnterior",
+          "quantidadeNoMes",
+          "quantidadeAcumulada",
+          "numero",
+          "descricao",
+          "valorContratado",
+          "valorAnterior",
+          "valorNoMes",
+          "valorAcumulado",
+          "saldo",
+          "percentualExecutado"
+        ],
+        "properties": {
+          "tipo": {
+            "enum": [
+              "item"
+            ],
+            "type": "string"
+          },
+          "unidade": {
+            "type": "string"
+          },
+          "precoUnitario": {
+            "type": "number",
+            "format": "double"
+          },
+          "quantidadeContratada": {
+            "type": "number",
+            "format": "double"
+          },
+          "quantidadeAnterior": {
+            "type": "number",
+            "format": "double"
+          },
+          "quantidadeNoMes": {
+            "type": "number",
+            "format": "double"
+          },
+          "quantidadeAcumulada": {
+            "type": "number",
+            "format": "double"
+          },
+          "numero": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "valorContratado": {
+            "type": "number",
+            "format": "double"
+          },
+          "valorAnterior": {
+            "type": "number",
+            "format": "double"
+          },
+          "valorNoMes": {
+            "type": "number",
+            "format": "double"
+          },
+          "valorAcumulado": {
+            "type": "number",
+            "format": "double"
+          },
+          "saldo": {
+            "type": "number",
+            "format": "double"
+          },
+          "percentualExecutado": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "LinhaDoFisicoFinanceiroResposta": {
+        "required": [
+          "numero",
+          "descricao",
+          "total",
+          "valores",
+          "custoTotal",
+          "custos"
+        ],
+        "type": "object",
+        "properties": {
+          "numero": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "total": {
+            "type": "number",
+            "format": "double"
+          },
+          "valores": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "custoTotal": {
+            "type": "number",
+            "format": "double"
+          },
+          "custos": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "LinhaDoValorAgregadoResposta": {
+        "required": [
+          "numero",
+          "descricao",
+          "indicadores"
+        ],
+        "type": "object",
+        "properties": {
+          "numero": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "indicadores": {
+            "$ref": "#/components/schemas/IndicadoresResposta"
+          }
+        },
+        "additionalProperties": false
+      },
+      "LinhaPlanejadaResposta": {
+        "required": [
+          "tipo"
+        ],
+        "type": "object",
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/LinhaPlanejadaRespostaEtapaPlanejadaResposta"
+          },
+          {
+            "$ref": "#/components/schemas/LinhaPlanejadaRespostaItemPlanejadoResposta"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "tipo",
+          "mapping": {
+            "etapa": "#/components/schemas/LinhaPlanejadaRespostaEtapaPlanejadaResposta",
+            "item": "#/components/schemas/LinhaPlanejadaRespostaItemPlanejadoResposta"
+          }
+        }
+      },
+      "LinhaPlanejadaRespostaEtapaPlanejadaResposta": {
+        "required": [
+          "numero",
+          "descricao",
+          "total",
+          "valoresPlanejados",
+          "custoTotal",
+          "custosPlanejados"
+        ],
+        "properties": {
+          "tipo": {
+            "enum": [
+              "etapa"
+            ],
+            "type": "string"
+          },
+          "numero": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "total": {
+            "type": "number",
+            "format": "double"
+          },
+          "valoresPlanejados": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "custoTotal": {
+            "type": "number",
+            "format": "double"
+          },
+          "custosPlanejados": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "LinhaPlanejadaRespostaItemPlanejadoResposta": {
+        "required": [
+          "unidade",
+          "quantidade",
+          "precoUnitario",
+          "custoUnitario",
+          "atividade",
+          "numero",
+          "descricao",
+          "total",
+          "valoresPlanejados",
+          "custoTotal",
+          "custosPlanejados"
+        ],
+        "properties": {
+          "tipo": {
+            "enum": [
+              "item"
+            ],
+            "type": "string"
+          },
+          "unidade": {
+            "type": "string"
+          },
+          "quantidade": {
+            "type": "number",
+            "format": "double"
+          },
+          "precoUnitario": {
+            "type": "number",
+            "format": "double"
+          },
+          "custoUnitario": {
+            "type": "number",
+            "format": "double"
+          },
+          "atividade": {
+            "type": "string"
+          },
+          "numero": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "total": {
+            "type": "number",
+            "format": "double"
+          },
+          "valoresPlanejados": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "custoTotal": {
+            "type": "number",
+            "format": "double"
+          },
+          "custosPlanejados": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "MedicaoResposta": {
+        "required": [
+          "numero",
+          "mes",
+          "itens"
+        ],
+        "type": "object",
+        "properties": {
+          "numero": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "mes": {
+            "type": "string",
+            "format": "date"
+          },
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LancamentoResposta"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "NoDaEapResposta": {
+        "required": [
+          "tipo"
+        ],
+        "type": "object",
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/NoDaEapRespostaEtapaResposta"
+          },
+          {
+            "$ref": "#/components/schemas/NoDaEapRespostaItemDoOrcamentoResposta"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "tipo",
+          "mapping": {
+            "etapa": "#/components/schemas/NoDaEapRespostaEtapaResposta",
+            "item": "#/components/schemas/NoDaEapRespostaItemDoOrcamentoResposta"
+          }
+        }
+      },
+      "NoDaEapRespostaEtapaResposta": {
+        "required": [
+          "titulo",
+          "filhos",
+          "numero"
+        ],
+        "properties": {
+          "tipo": {
+            "enum": [
+              "etapa"
+            ],
+            "type": "string"
+          },
+          "titulo": {
+            "type": "string"
+          },
+          "filhos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NoDaEapResposta"
+            }
+          },
+          "numero": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "NoDaEapRespostaItemDoOrcamentoResposta": {
+        "required": [
+          "codigo",
+          "quantidade",
+          "atividade",
+          "bdiDiferenciado",
+          "numero"
+        ],
+        "properties": {
+          "tipo": {
+            "enum": [
+              "item"
+            ],
+            "type": "string"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "quantidade": {
+            "type": "number",
+            "format": "double"
+          },
+          "atividade": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bdiDiferenciado": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BdiDoOrcamento"
+              }
+            ]
+          },
+          "numero": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "NovaAtividade": {
+        "required": [
+          "codigo",
+          "descricao",
+          "duracaoEmDiasUteis"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "duracaoEmDiasUteis": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "NovaBaseDeCustos": {
+        "required": [
+          "nome",
+          "dataBase"
+        ],
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string"
+          },
+          "dataBase": {
+            "type": "string",
+            "format": "date"
+          },
+          "insumos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/NovoInsumo"
+            }
+          },
+          "composicoes": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/NovaComposicao"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "NovaComposicao": {
+        "required": [
+          "codigo",
+          "descricao",
+          "unidade"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "unidade": {
+            "type": "string"
+          },
+          "itens": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/NovoItemDaComposicao"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "NovaDependencia": {
+        "required": [
+          "predecessora",
+          "sucessora"
+        ],
+        "type": "object",
+        "properties": {
+          "predecessora": {
+            "type": "string"
+          },
+          "sucessora": {
+            "type": "string"
+          },
+          "tipo": {
+            "$ref": "#/components/schemas/TipoDeDependencia"
+          },
+          "defasagemEmDiasUteis": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "NovaEtapa": {
+        "required": [
+          "titulo"
+        ],
+        "type": "object",
+        "properties": {
+          "titulo": {
+            "type": "string"
+          },
+          "filhos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/NovoNoDaEap"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "NovaLinhaDeBase": {
+        "required": [
+          "nome",
+          "aprovadaEm",
+          "orcamento",
+          "baseDeCustos",
+          "cronograma",
+          "inicio"
+        ],
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string"
+          },
+          "aprovadaEm": {
+            "type": "string",
+            "format": "date"
+          },
+          "orcamento": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "baseDeCustos": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cronograma": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "inicio": {
+            "type": "string",
+            "format": "date"
+          },
+          "feriados": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          "sabadoUtil": {
+            "type": "boolean",
+            "default": false
+          },
+          "datas": {
+            "$ref": "#/components/schemas/DatasDoCronograma"
+          }
+        },
+        "additionalProperties": false
+      },
+      "NovaMedicao": {
+        "required": [
+          "mes",
+          "lancamentos"
+        ],
+        "type": "object",
+        "properties": {
+          "mes": {
+            "type": "string",
+            "format": "date"
+          },
+          "lancamentos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NovoLancamento"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "NovaQuantidade": {
+        "required": [
+          "quantidade"
+        ],
+        "type": "object",
+        "properties": {
+          "quantidade": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "NovoAcompanhamento": {
+        "required": [
+          "linhaDeBase"
+        ],
+        "type": "object",
+        "properties": {
+          "linhaDeBase": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "NovoCoeficiente": {
+        "required": [
+          "coeficiente"
+        ],
+        "type": "object",
+        "properties": {
+          "coeficiente": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "NovoCronograma": {
+        "required": [
+          "nome"
+        ],
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string"
+          },
+          "atividades": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/NovaAtividade"
+            }
+          },
+          "dependencias": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/NovaDependencia"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "NovoInsumo": {
+        "required": [
+          "codigo",
+          "descricao",
+          "unidade",
+          "tipo",
+          "preco"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "unidade": {
+            "type": "string"
+          },
+          "tipo": {
+            "$ref": "#/components/schemas/TipoDeInsumo"
+          },
+          "preco": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "NovoItemDaComposicao": {
+        "required": [
+          "codigo",
+          "coeficiente"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "coeficiente": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "NovoLancamento": {
+        "required": [
+          "item",
+          "quantidade"
+        ],
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "string"
+          },
+          "quantidade": {
+            "type": "number",
+            "format": "double"
+          },
+          "custoReal": {
+            "type": "number",
+            "format": "double",
+            "default": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "NovoNoDaEap": {
+        "type": "object",
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/NovoNoDaEapNovaEtapa"
+          },
+          {
+            "$ref": "#/components/schemas/NovoNoDaEapNovoItemDoOrcamento"
+          },
+          {
+            "$ref": "#/components/schemas/NovoNoDaEapBase"
+          }
+        ]
+      },
+      "NovoNoDaEapBase": {
+        "additionalProperties": false
+      },
+      "NovoNoDaEapNovaEtapa": {
+        "required": [
+          "tipo",
+          "titulo"
+        ],
+        "properties": {
+          "tipo": {
+            "enum": [
+              "etapa"
+            ],
+            "type": "string"
+          },
+          "titulo": {
+            "type": "string"
+          },
+          "filhos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/NovoNoDaEap"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "NovoNoDaEapNovoItemDoOrcamento": {
+        "required": [
+          "tipo",
+          "codigo",
+          "quantidade"
+        ],
+        "properties": {
+          "tipo": {
+            "enum": [
+              "item"
+            ],
+            "type": "string"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "quantidade": {
+            "type": "number",
+            "format": "double"
+          },
+          "atividade": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bdiDiferenciado": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BdiDoOrcamento"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "NovoNome": {
+        "required": [
+          "nome"
+        ],
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "NovoOrcamento": {
+        "required": [
+          "nome",
+          "bdi"
+        ],
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string"
+          },
+          "bdi": {
+            "$ref": "#/components/schemas/BdiDoOrcamento"
+          },
+          "etapas": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/NovaEtapa"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "NovoPreco": {
+        "required": [
+          "preco"
+        ],
+        "type": "object",
+        "properties": {
+          "preco": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "NovoTitulo": {
+        "required": [
+          "titulo"
+        ],
+        "type": "object",
+        "properties": {
+          "titulo": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ObraNoPainelResposta": {
+        "required": [
+          "acompanhamento",
+          "linhaDeBase",
+          "obra",
+          "situacao",
+          "medicao",
+          "mes",
+          "orcamentoNoTermino",
+          "valorPlanejado",
+          "valorAgregado",
+          "custoReal",
+          "indiceDeDesempenhoDePrazo",
+          "indiceDeDesempenhoDeCusto",
+          "estimativaNoTermino",
+          "variacaoNoTermino",
+          "duracaoPlanejadaEmMeses",
+          "prazoAgregadoEmMeses",
+          "duracaoEstimadaEmMeses",
+          "versaoDoAcompanhamento",
+          "atualizadoEm"
+        ],
+        "type": "object",
+        "properties": {
+          "acompanhamento": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "linhaDeBase": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "obra": {
+            "type": "string"
+          },
+          "situacao": {
+            "$ref": "#/components/schemas/SituacaoDaObra"
+          },
+          "medicao": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "mes": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "orcamentoNoTermino": {
+            "type": "number",
+            "format": "double"
+          },
+          "valorPlanejado": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "valorAgregado": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "custoReal": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "indiceDeDesempenhoDePrazo": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "indiceDeDesempenhoDeCusto": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "estimativaNoTermino": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "variacaoNoTermino": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "duracaoPlanejadaEmMeses": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "prazoAgregadoEmMeses": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "duracaoEstimadaEmMeses": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "versaoDoAcompanhamento": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "atualizadoEm": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "OrcamentoResposta": {
+        "required": [
+          "id",
+          "nome",
+          "bdi",
+          "etapas"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "bdi": {
+            "$ref": "#/components/schemas/BdiDoOrcamento"
+          },
+          "etapas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EtapaResposta"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ParcelasDoBdiDoOrcamento": {
+        "required": [
+          "administracaoCentral",
+          "seguros",
+          "riscos",
+          "garantias",
+          "despesasFinanceiras",
+          "lucro",
+          "tributos"
+        ],
+        "type": "object",
+        "properties": {
+          "administracaoCentral": {
+            "type": "number",
+            "format": "double"
+          },
+          "seguros": {
+            "type": "number",
+            "format": "double"
+          },
+          "riscos": {
+            "type": "number",
+            "format": "double"
+          },
+          "garantias": {
+            "type": "number",
+            "format": "double"
+          },
+          "despesasFinanceiras": {
+            "type": "number",
+            "format": "double"
+          },
+          "lucro": {
+            "type": "number",
+            "format": "double"
+          },
+          "tributos": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PeriodoResposta": {
+        "required": [
+          "numero",
+          "mes",
+          "valor",
+          "percentual",
+          "acumulado",
+          "percentualAcumulado"
+        ],
+        "type": "object",
+        "properties": {
+          "numero": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "mes": {
+            "type": "string",
+            "format": "date"
+          },
+          "valor": {
+            "type": "number",
+            "format": "double"
+          },
+          "percentual": {
+            "type": "number",
+            "format": "double"
+          },
+          "acumulado": {
+            "type": "number",
+            "format": "double"
+          },
+          "percentualAcumulado": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PlanilhaResposta": {
+        "required": [
+          "orcamento",
+          "baseDeCustos",
+          "dataBase",
+          "bdi",
+          "custoDireto",
+          "total",
+          "linhas"
+        ],
+        "type": "object",
+        "properties": {
+          "orcamento": {
+            "type": "string"
+          },
+          "baseDeCustos": {
+            "type": "string"
+          },
+          "dataBase": {
+            "type": "string",
+            "format": "date"
+          },
+          "bdi": {
+            "$ref": "#/components/schemas/BdiDoOrcamento"
+          },
+          "custoDireto": {
+            "type": "number",
+            "format": "double"
+          },
+          "total": {
+            "type": "number",
+            "format": "double"
+          },
+          "linhas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LinhaDaPlanilhaResposta"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "PontoDaCurvaResposta": {
+        "required": [
+          "mes",
+          "valorPlanejado",
+          "valorAgregado",
+          "custoReal"
+        ],
+        "type": "object",
+        "properties": {
+          "mes": {
+            "type": "string",
+            "format": "date"
+          },
+          "valorPlanejado": {
+            "type": "number",
+            "format": "double"
+          },
+          "valorAgregado": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "custoReal": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PrazoAgregadoResposta": {
+        "required": [
+          "duracaoPlanejadaEmMeses",
+          "prazoDecorridoEmMeses",
+          "prazoAgregadoEmMeses",
+          "variacaoDePrazoEmMeses",
+          "indiceDeDesempenhoDePrazo",
+          "duracaoEstimadaEmMeses"
+        ],
+        "type": "object",
+        "properties": {
+          "duracaoPlanejadaEmMeses": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "prazoDecorridoEmMeses": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "prazoAgregadoEmMeses": {
+            "type": "number",
+            "format": "double"
+          },
+          "variacaoDePrazoEmMeses": {
+            "type": "number",
+            "format": "double"
+          },
+          "indiceDeDesempenhoDePrazo": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "duracaoEstimadaEmMeses": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProgramacaoResposta": {
+        "required": [
+          "dataDeInicio",
+          "dataDeTermino",
+          "duracaoEmDiasUteis",
+          "atividades",
+          "dependenciasCriticas"
+        ],
+        "type": "object",
+        "properties": {
+          "dataDeInicio": {
+            "type": "string",
+            "format": "date"
+          },
+          "dataDeTermino": {
+            "type": "string",
+            "format": "date"
+          },
+          "duracaoEmDiasUteis": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "atividades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AtividadeProgramadaResposta"
+            }
+          },
+          "dependenciasCriticas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DependenciaResposta"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ResumoResposta": {
+        "required": [
+          "id",
+          "nome",
+          "versao",
+          "atualizadoEm"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "versao": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "atualizadoEm": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SituacaoDaObra": {
+        "enum": [
+          "SemMedicao",
+          "EmDia",
+          "Atencao",
+          "Critica"
+        ]
+      },
+      "TemposDaAtividadeResposta": {
+        "required": [
+          "codigo",
+          "duracaoEmDiasUteis",
+          "inicioCedo",
+          "terminoCedo",
+          "inicioTarde",
+          "terminoTarde",
+          "folgaTotal",
+          "folgaLivre",
+          "ehCritica",
+          "ehMarco"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "duracaoEmDiasUteis": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "inicioCedo": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "terminoCedo": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "inicioTarde": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "terminoTarde": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "folgaTotal": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "folgaLivre": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "ehCritica": {
+            "type": "boolean"
+          },
+          "ehMarco": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TipoDeDependencia": {
+        "enum": [
+          "TerminoInicio",
+          "InicioInicio",
+          "TerminoTermino",
+          "InicioTermino"
+        ]
+      },
+      "TipoDeInsumo": {
+        "enum": [
+          "Material",
+          "MaoDeObra",
+          "Equipamento"
+        ]
+      },
+      "ValorAgregadoResposta": {
+        "required": [
+          "medicao",
+          "mes",
+          "obra",
+          "prazo",
+          "linhas",
+          "curva"
+        ],
+        "type": "object",
+        "properties": {
+          "medicao": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "mes": {
+            "type": "string",
+            "format": "date"
+          },
+          "obra": {
+            "$ref": "#/components/schemas/IndicadoresResposta"
+          },
+          "prazo": {
+            "$ref": "#/components/schemas/PrazoAgregadoResposta"
+          },
+          "linhas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LinhaDoValorAgregadoResposta"
+            }
+          },
+          "curva": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PontoDaCurvaResposta"
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "securitySchemes": {
+      "Bearer": {
+        "type": "http",
+        "description": "Token do provedor de identidade, com as reivindicações empresa e role.",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    {
+      "Bearer": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Acompanhamentos"
+    },
+    {
+      "name": "Bases de custos"
+    },
+    {
+      "name": "Cronogramas"
+    },
+    {
+      "name": "Linhas de base"
+    },
+    {
+      "name": "Orçamentos"
+    },
+    {
+      "name": "Painel"
+    }
+  ]
+}

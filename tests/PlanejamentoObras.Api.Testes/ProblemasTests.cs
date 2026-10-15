@@ -51,6 +51,7 @@ public sealed class ProblemasTests(ApiDeTestes api)
     [InlineData("""{"nome": null}""", "nome")]
     [InlineData("""{"nome": "Casa", "cor": "azul"}""", "cor")]
     [InlineData("""{"nome": "Casa", "dependencias": [{"predecessora": "A", "sucessora": "B", "tipo": 0}]}""", "tipo")]
+    [InlineData("""{"nome": "Casa", "atividades": [{"codigo": "FUN", "descricao": "Fundações", "duracaoEmDiasUteis": "10"}]}""", "duracaoEmDiasUteis")]
     [InlineData("""{"nome": "Casa",""", "")]
     public async Task Corpo_fora_do_contrato_e_400_dizendo_o_que_estava_errado(string json, string campo)
     {
