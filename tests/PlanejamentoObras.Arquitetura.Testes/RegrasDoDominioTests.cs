@@ -127,6 +127,23 @@ public sealed class RegrasDoDominioTests
         Assert.Empty(semIdentidade);
     }
 
+    [Fact]
+    public void Todo_evento_de_dominio_e_um_record_selado()
+    {
+        /*
+         * Evento é fato consumado: imutável, comparado pelo valor, e sem
+         * subclasse que o reinterprete depois.
+         */
+        var eventos = Dominio.GetTypes()
+            .Where(tipo => tipo.IsSubclassOf(typeof(EventoDeDominio)) && !tipo.IsAbstract)
+            .ToList();
+
+        Assert.NotEmpty(eventos);
+        Assert.All(eventos, evento => Assert.True(
+            evento.IsSealed && evento.GetMethod("<Clone>$") is not null,
+            $"{evento.Name} deveria ser um record selado."));
+    }
+
     private static bool EhDaBibliotecaPadrao(string nome) =>
         nome is "System" or "netstandard" or "mscorlib"
         || nome.StartsWith("System.", StringComparison.Ordinal);

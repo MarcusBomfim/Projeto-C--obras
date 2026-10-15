@@ -20,14 +20,20 @@ namespace PlanejamentoObras.Dominio.Medicoes;
 /// valores medidos e indicadores são derivados — ver
 /// <see cref="EmissaoDoBoletim"/>.
 /// </para>
+/// <para>
+/// Registra os fatos — o começo do acompanhamento, cada medição registrada
+/// ou desfeita — para quem depende deles, como o painel das obras
+/// (ADR-0016).
+/// </para>
 /// </remarks>
-public sealed class Acompanhamento
+public sealed class Acompanhamento : AgregadoComEventos
 {
     private readonly List<Medicao> _medicoes = [];
 
     public Acompanhamento(LinhaDeBase linhaDeBase)
         : this(AcompanhamentoId.Novo(), linhaDeBase)
     {
+        Registrar(new AcompanhamentoIniciado(Id, LinhaDeBase.Id));
     }
 
     /// <summary>
@@ -102,6 +108,7 @@ public sealed class Acompanhamento
 
         var medicao = new Medicao(_medicoes.Count + 1, competencia, itens);
         _medicoes.Add(medicao);
+        Registrar(new MedicaoRegistrada(Id, medicao.Numero, medicao.Mes));
 
         return medicao;
     }
@@ -117,7 +124,9 @@ public sealed class Acompanhamento
             throw new ExcecaoDeDominio("Não há medição para desfazer.");
         }
 
+        var ultima = _medicoes[^1];
         _medicoes.RemoveAt(_medicoes.Count - 1);
+        Registrar(new MedicaoDesfeita(Id, ultima.Numero, ultima.Mes));
     }
 
     /// <summary>A medição pelo número: 1 é a primeira.</summary>

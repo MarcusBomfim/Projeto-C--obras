@@ -50,6 +50,10 @@ internal sealed record DocumentoDoAcompanhamento
                 medicao.Itens.Select(item => new LancamentoDeMedicao(item.Item, item.Quantidade, item.CustoReal)));
         }
 
+        // Registrar de novo as medições gravadas não é registrá-las de novo:
+        // os eventos delas já foram publicados quando aconteceram (ADR-0016).
+        acompanhamento.DescartarEventos();
+
         return acompanhamento;
     }
 }
