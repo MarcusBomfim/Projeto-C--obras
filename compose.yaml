@@ -1,0 +1,103 @@
+# A pilha inteira em contêineres, como vai para produção (ADR-0020): o
+# PostgreSQL com os papéis de produção, a migração, a API, o processador, o
+# front-end e o painel do OpenTelemetry.
+#
+#   docker compose up --build
+#
+# O front-end fica em http://localhost:5280, a API em http://localhost:5281 e o
+# painel dos rastros, métricas e logs em http://localhost:18888.
+#
+# As senhas têm valor padrão para rodar na máquina de quem desenvolve; em
+# qualquer outro lugar, vêm do ambiente. As imagens, por padrão, são as
+# compiladas aqui; REGISTRO e VERSAO apontam para as publicadas.
+
+name: planejamento-obras
+
+x-telemetria: &telemetria
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://observabilidade:18889
+
+services:
+  banco:
+    image: postgres:17.6-alpine@sha256:ef257d85f76e48da1c64832459b59fcaba1a4dac97bf5d7450c77753542eee94
+    environment:
+      POSTGRES_DB: planejamento_obras
+      POSTGRES_PASSWORD: ${SENHA_DO_BANCO:-postgres}
+      SENHA_DA_APLICACAO: ${SENHA_DA_APLICACAO:-aplicacao}
+      SENHA_DO_PROCESSADOR: ${SENHA_DO_PROCESSADOR:-processador}
+    volumes:
+      - ./docker/banco:/docker-entrypoint-initdb.d:ro
+      - banco:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD', 'pg_isready', '--username', 'postgres', '--dbname', 'planejamento_obras']
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  # Roda as migrações como o dono das tabelas, e sai. A API e o processador
+  # só sobem depois que ele termina bem.
+  migrador:
+    image: ${REGISTRO:-planejamento-obras}-migrador:${VERSAO:-local}
+    build:
+      context: .
+      target: migrador
+    environment:
+      ConnectionStrings__Planejamento: Host=banco;Database=planejamento_obras;Username=postgres;Password=${SENHA_DO_BANCO:-postgres}
+    depends_on:
+      banco:
+        condition: service_healthy
+
+  api:
+    image: ${REGISTRO:-planejamento-obras}-api:${VERSAO:-local}
+    build:
+      context: .
+      target: api
+    environment:
+      <<: *telemetria
+      ConnectionStrings__Planejamento: Host=banco;Database=planejamento_obras;Username=planejamento_aplicacao;Password=${SENHA_DA_APLICACAO:-aplicacao}
+      # O provedor de identidade é o dos testes de ponta a ponta: uma chave de
+      # teste, pública no repositório. Em produção, o da empresa.
+      Authentication__Schemes__Bearer__ValidIssuer: planejamento-obras-e2e
+      Authentication__Schemes__Bearer__ValidAudiences__0: planejamento-obras-e2e
+      Authentication__Schemes__Bearer__SigningKeys__0__Issuer: planejamento-obras-e2e
+      Authentication__Schemes__Bearer__SigningKeys__0__Value: cGxhbmVqYW1lbnRvLW9icmFzLWUyZTogY2hhdmUgZG9zIHRlc3RlcyBkZSBwb250YSBhIHBvbnRh
+    ports:
+      - 5281:8080
+    depends_on:
+      migrador:
+        condition: service_completed_successfully
+
+  processador:
+    image: ${REGISTRO:-planejamento-obras}-processador:${VERSAO:-local}
+    build:
+      context: .
+      target: processador
+    environment:
+      <<: *telemetria
+      ConnectionStrings__Planejamento: Host=banco;Database=planejamento_obras;Username=planejamento_processador;Password=${SENHA_DO_PROCESSADOR:-processador}
+    ports:
+      - 5282:8080
+    depends_on:
+      migrador:
+        condition: service_completed_successfully
+
+  web:
+    image: ${REGISTRO:-planejamento-obras}-web:${VERSAO:-local}
+    build:
+      context: .
+      target: web
+    ports:
+      - 5280:8080
+    depends_on:
+      - api
+
+  # O painel do .NET Aspire, sozinho: recebe rastros, métricas e logs por OTLP
+  # e os mostra. Sem login — é para a máquina de quem desenvolve.
+  observabilidade:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:13.6.1@sha256:03099004e132a7ca2feb66c5fa24715ffeaaf2fffab6f8b2cda23de3abd3ea45
+    environment:
+      ASPIRE_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: 'true'
+    ports:
+      - 18888:18888
+
+volumes:
+  banco:

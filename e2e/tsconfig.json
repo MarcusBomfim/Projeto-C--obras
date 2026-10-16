@@ -14,8 +14,9 @@
     "noUnusedParameters": true,
 
     "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true,
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["apoio", "testes", "playwright.config.ts"]
+  "include": ["apoio", "testes", "playwright.config.ts", "playwright.imagens.config.ts"]
 }
