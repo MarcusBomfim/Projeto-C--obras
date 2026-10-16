@@ -2,10 +2,11 @@
 
 [![CI](https://github.com/MarcusBomfim/Projeto-C--obras/actions/workflows/ci.yml/badge.svg)](https://github.com/MarcusBomfim/Projeto-C--obras/actions/workflows/ci.yml)
 [![Ponta a ponta](https://github.com/MarcusBomfim/Projeto-C--obras/actions/workflows/e2e.yml/badge.svg)](https://github.com/MarcusBomfim/Projeto-C--obras/actions/workflows/e2e.yml)
+[![Entrega](https://github.com/MarcusBomfim/Projeto-C--obras/actions/workflows/entrega.yml/badge.svg)](https://github.com/MarcusBomfim/Projeto-C--obras/actions/workflows/entrega.yml)
 
-Planejamento e controle de obra como o engenheiro de planejamento faz: rede de precedências e caminho crítico, orçamento com composições de custo e BDI, o cronograma físico-financeiro que junta os dois — e a obra medida mês a mês contra o plano aprovado, com boletim de medição, valor agregado e um painel das obras que se atualiza em segundo plano a cada medição. Pela API ou no navegador, com o Gantt e a curva S.
+Planejamento e controle de obra como o engenheiro de planejamento faz: rede de precedências e caminho crítico, orçamento com composições de custo e BDI, o cronograma físico-financeiro que junta os dois — e a obra medida mês a mês contra o plano aprovado, com boletim de medição, valor agregado e um painel das obras que se atualiza em segundo plano a cada medição. Pela API ou no navegador, com o Gantt e a curva S; em contêineres, com o rastro de cada medição do pedido HTTP ao painel.
 
-C# 14 · .NET 10 · ASP.NET Core 10 · EF Core 10 · PostgreSQL 17 · React 19 · TypeScript · Vite · TanStack Query · Testcontainers · xUnit v3 · Vitest · Playwright · GitHub Actions
+C# 14 · .NET 10 · ASP.NET Core 10 · EF Core 10 · PostgreSQL 17 · React 19 · TypeScript · Vite · TanStack Query · OpenTelemetry · Docker · Testcontainers · xUnit v3 · Vitest · Playwright · GitHub Actions
 
 ## O problema
 
@@ -333,6 +334,14 @@ E o cronograma em Gantt, programado com os feriados do README: o caminho crític
 
 Cada gráfico tem ao lado a tabela dos seus números, e a situação da obra é escrita, não só colorida. Os tipos do front-end saem do contrato da API, versionado em [`docs/api/openapi.json`](docs/api/openapi.json): se a API mudar e o front-end não, o CI acusa ([ADR-0018](docs/adr/0018-front-end-tipado-pelo-contrato-da-api.md)).
 
+### Num rastro só
+
+Uma medição da obra do exemplo, registrada pelos testes de ponta a ponta na pilha em contêineres e vista no painel do OpenTelemetry: o pedido HTTP na API, os comandos dele no banco, a publicação na caixa de saída — e, em continuação a ela, o tratamento no processador, com os comandos dele. Dois serviços e um rastro, do pedido ao painel das obras atualizado em menos de 40 milissegundos:
+
+![O rastro de uma medição: o pedido HTTP na API, a publicação na caixa de saída e o tratamento no processador](docs/imagens/rastro.png)
+
+O rastro atravessa a caixa de saída porque a mensagem leva o contexto do pedido que registrou o fato ([ADR-0019](docs/adr/0019-observabilidade-com-opentelemetry.md)). E o mesmo intervalo vira métrica: `planejamento.caixa_de_saida.espera`, por tipo de mensagem, diz quanto um fato leva para chegar ao painel — sem abrir rastro nenhum.
+
 ## Roteiro
 
 O projeto é construído em partes, cada uma entregue funcionando, testada e documentada.
@@ -346,7 +355,7 @@ O projeto é construído em partes, cada uma entregue funcionando, testada e doc
 | 5 | API REST: JWT, autorização por política, multi-tenant, ProblemDetails, idempotência e concorrência otimista | ✅ |
 | 6 | Eventos de domínio, outbox e processamento em segundo plano | ✅ |
 | 7 | Front-end em React: Gantt com caminho crítico, curva S e painel de valor agregado | ✅ |
-| 8 | Observabilidade com OpenTelemetry, Docker e entrega contínua | |
+| 8 | Observabilidade com OpenTelemetry, Docker e entrega contínua | ✅ |
 
 ## O que já está pronto
 
@@ -418,6 +427,16 @@ O projeto é construído em partes, cada uma entregue funcionando, testada e doc
 - **Gráficos em SVG feitos à mão**, com a geometria em funções puras, e cada um com a tabela dos seus números ao lado, para leitor de tela. A situação é sempre escrita, nunca só cor.
 - **Cada área se registra sozinha**, com as suas rotas e a entrada no menu, como os recursos da API.
 
+**Parte 8 — observabilidade, contêineres e entrega**
+
+- **OpenTelemetry na API e no processador:** os pedidos HTTP, os comandos no PostgreSQL, o runtime e as fontes do sistema, com os logs no mesmo rastro. Para onde vai é configuração do ambiente — as variáveis padrão do OTLP —, e não do código.
+- **O rastro atravessa a caixa de saída.** A mensagem leva o contexto do pedido que registrou o fato, e o processador trata em continuação a ele: o pedido, a publicação e o tratamento — com os comandos no banco — num rastro só, mesmo com minutos entre um e outro. Olhar a fila vazia não deixa rastro.
+- **Métricas da fila:** tentativas por tipo e resultado, duração e a **espera** — da gravação do fato ao fim do tratamento: quanto a medição leva para chegar ao painel.
+- **Saúde para o orquestrador:** `/saude/viva` e `/saude/pronta`. O processador está vivo enquanto a fila gira, e pronto enquanto, além disso, alcança o banco. Banco fora do ar tira de pronto, e não de vivo: reiniciar não o põe no ar.
+- **Quatro imagens de um Dockerfile:** a API, o processador, o migrador — o pacote de migrações do EF Core, que roda e sai — e o front-end no nginx, com a API na mesma origem. Sem shell e sem root, com as bases fixadas pelo digest.
+- **A pilha inteira no Compose**, com os papéis de produção no banco — a segurança por linha vale para a API e para o processador — e o painel do .NET Aspire recebendo rastros, métricas e logs.
+- **Entrega contínua:** cada commit da `main` que passa no CI vira imagens compiladas uma vez, testadas de ponta a ponta e publicadas — as mesmas — no GitHub Container Registry, com a proveniência assinada. Uma tag de versão só sai de commit verde, e vira uma release com o digest de cada imagem.
+
 ## Decisões
 
 As decisões que mudam o desenho do sistema estão registradas em [`docs/adr`](docs/adr):
@@ -440,6 +459,9 @@ As decisões que mudam o desenho do sistema estão registradas em [`docs/adr`](d
 - [ADR-0016](docs/adr/0016-eventos-de-dominio.md) — eventos de domínio são fatos no passado, registrados pelo agregado e publicados pela persistência; reconstituir não é acontecer de novo.
 - [ADR-0017](docs/adr/0017-caixa-de-saida-e-processamento-em-segundo-plano.md) — caixa de saída na mesma transação do agregado, tratada em segundo plano em nome da empresa de cada mensagem; tratador idempotente, e o painel refeito do estado.
 - [ADR-0018](docs/adr/0018-front-end-tipado-pelo-contrato-da-api.md) — o front-end tipado pelo contrato da API, versionado no repositório; o que vem da API no cache, e não num estado global; gráficos em SVG com a tabela ao lado.
+- [ADR-0019](docs/adr/0019-observabilidade-com-opentelemetry.md) — OpenTelemetry nos dois serviços, com o rastro atravessando a caixa de saída; a espera da fila como métrica; viva e pronta como perguntas diferentes.
+- [ADR-0020](docs/adr/0020-pilha-em-conteineres.md) — imagens sem shell nem root, bases fixadas pelo digest, migrações num contêiner à parte e o banco com os papéis de produção.
+- [ADR-0021](docs/adr/0021-entrega-continua.md) — entrega contínua: compilar uma vez, testar o que foi compilado e publicar o que foi testado; versão só de commit verde, com proveniência assinada.
 
 E algumas que não precisaram de ADR:
 
@@ -480,7 +502,12 @@ E algumas que não precisaram de ADR:
   - o painel e a ordem das obras, a obra com a curva S, e o Gantt com o calendário no endereço;
   - a entrada e o token recusado pela API;
   - a geometria dos gráficos, conferida em números.
-- **De ponta a ponta, no navegador** (Playwright). A obra do README é criada pela API numa empresa nova, com tokens assinados pelo próprio teste. No Chrome, o teste passa pelo painel, pela curva S e pelo Gantt. E uma medição nova chega ao painel já aberto, pela caixa de saída e pelo processador, sem recarregar a página.
+- **De ponta a ponta, no navegador** (Playwright). A obra do README é criada pela API numa empresa nova, com tokens assinados pelo próprio teste. No Chrome, o teste passa pelo painel, pela curva S e pelo Gantt. E uma medição nova chega ao painel já aberto, pela caixa de saída e pelo processador, sem recarregar a página. Os mesmos testes rodam contra as imagens Docker, na pilha do Compose, com os papéis de produção no banco.
+- **A observabilidade, com o SDK do OpenTelemetry de verdade** exportando para a memória:
+  - **o rastro de um fato**, do pedido HTTP ao tratamento em segundo plano; a mensagem sem contexto começa um rastro novo, e a volta vazia da fila não deixa rastro nenhum;
+  - **a falha**, com a exceção no rastro, e **cada tentativa medida** — por tipo e resultado, com a espera desde o fato;
+  - **a saúde**: viva e pronta, com e sem banco, com a fila girando e parada, no host do processador como ele sobe;
+  - **a telemetria saindo por OTLP** para um coletor de mentira, quando o endereço está configurado.
 - **Arquitetura.** O domínio só referencia a biblioteca padrão; toda classe pública é selada, estática ou abstrata; nenhuma propriedade tem `set` público — o estado só muda pelos métodos do domínio; todo agregado tem identidade própria; todo evento de domínio é um record selado; e só a infraestrutura e os testes do domínio enxergam os internos dele.
 
 ## Como rodar
@@ -539,6 +566,33 @@ npm ci --prefix e2e
 npm --prefix e2e run teste
 ```
 
+### Em contêineres
+
+A pilha inteira — o PostgreSQL com os papéis de produção, a migração, a API, o processador, o front-end e o painel do OpenTelemetry — sobe com o Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+O front-end abre em `http://localhost:5280`, e o painel dos rastros, métricas e logs, em `http://localhost:18888`. A pilha aceita os tokens da chave dos testes de ponta a ponta, e o Node 24 gera um sem instalar nada:
+
+```bash
+node e2e/apoio/token.ts --empresa 0199e3b4-0000-7000-8000-000000000001
+```
+
+Os testes de ponta a ponta também rodam contra ela — os mesmos, sem subir nada:
+
+```bash
+E2E_WEB=http://localhost:5280 npm --prefix e2e run teste:imagens
+```
+
+As imagens publicadas pela entrega contínua ficam no GitHub Container Registry, com a proveniência assinada; para subir a pilha com elas, e não com as compiladas aqui, e conferir de onde cada uma saiu:
+
+```bash
+REGISTRO=ghcr.io/marcusbomfim/planejamento-obras VERSAO=main docker compose up --no-build
+gh attestation verify oci://ghcr.io/marcusbomfim/planejamento-obras-api:main --owner MarcusBomfim
+```
+
 ## Estrutura
 
 ```text
@@ -563,6 +617,7 @@ src/PlanejamentoObras.Api/                      a API REST
   Recursos/                                     um recurso por agregado, o painel, e as representações
 src/PlanejamentoObras.Processamento/            a fila da caixa de saída, os tratadores e as rotinas de limpeza
 src/PlanejamentoObras.Processador/              o host que roda o processamento, fora da API
+src/PlanejamentoObras.Observabilidade/          OpenTelemetry e verificações de saúde, iguais nos dois serviços
 tests/PlanejamentoObras.Dominio.Testes/         exemplos, propriedades e o exemplo deste README
 tests/PlanejamentoObras.Infraestrutura.Testes/  documentos, repositórios e caixa de saída, contra PostgreSQL de verdade
 tests/PlanejamentoObras.Processamento.Testes/   o processador, o painel e as rotinas, contra PostgreSQL de verdade
@@ -577,4 +632,7 @@ e2e/                                            os testes de ponta a ponta, no n
 docs/adr/                                       decisões de arquitetura
 docs/api/                                       o contrato OpenAPI e o catálogo de problemas da API
 docs/imagens/                                   as telas deste README
+docker/                                         o nginx do front-end e os papéis do banco do Compose
+Dockerfile, compose.yaml                        as quatro imagens, e a pilha inteira em contêineres
+.github/workflows/                              CI, ponta a ponta e entrega contínua
 ```

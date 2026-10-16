@@ -1,0 +1,54 @@
+# As dependências atualizadas por pull request, toda semana, agrupadas para
+# não virarem vinte PRs (ADR-0021). Versão nova espera duas semanas antes de
+# ser proposta: o tempo de outros a usarem primeiro — e de uma versão com
+# defeito ser retirada.
+version: 2
+
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      dotnet:
+        patterns: ['*']
+
+  - package-ecosystem: npm
+    directories: [/web, /e2e]
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      npm:
+        patterns: ['*']
+
+  # As actions fixadas pelo SHA: o Dependabot troca o SHA e o comentário da versão.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      actions:
+        patterns: ['*']
+
+  # As bases das imagens, fixadas pelo digest: no Dockerfile e no Compose.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      imagens:
+        patterns: ['*']
+
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      compose:
+        patterns: ['*']
