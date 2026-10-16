@@ -2,6 +2,10 @@
 # não virarem vinte PRs (ADR-0021). Versão nova espera duas semanas antes de
 # ser proposta: o tempo de outros a usarem primeiro — e de uma versão com
 # defeito ser retirada.
+#
+# Versão maior do .NET, do Node, do TypeScript, do PostgreSQL e das bases
+# das imagens fica de fora: é migração planejada, com o que muda junto, e não
+# um PR que o CI só pode reprovar.
 version: 2
 
 updates:
@@ -11,6 +15,13 @@ updates:
       interval: weekly
     cooldown:
       default-days: 14
+    # Os pacotes da Microsoft e do Npgsql andam com a versão do .NET: a 11
+    # pede o alvo dos projetos, o SDK e as imagens na 11 também.
+    ignore:
+      - dependency-name: 'Microsoft.*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'Npgsql*'
+        update-types: ['version-update:semver-major']
     groups:
       dotnet:
         patterns: ['*']
@@ -21,6 +32,14 @@ updates:
       interval: weekly
     cooldown:
       default-days: 14
+    # O TypeScript fica no 5 enquanto o typescript-eslint e o openapi-typescript
+    # não aceitarem o 7 (ADR-0018); os tipos do Node, na versão maior do Node
+    # que roda o projeto, a 24.
+    ignore:
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
     groups:
       npm:
         patterns: ['*']
@@ -36,11 +55,18 @@ updates:
       actions:
         patterns: ['*']
 
-  # As bases das imagens, fixadas pelo digest: no Dockerfile e no Compose.
+  # As bases das imagens, fixadas pelo digest: no Dockerfile e no Compose. A
+  # versão maior de uma base é a do .NET, do Node ou do PostgreSQL — o 18 muda
+  # até o formato dos dados e o volume do Compose.
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 14
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
     groups:
       imagens:
         patterns: ['*']
@@ -49,6 +75,11 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 14
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
     groups:
       compose:
         patterns: ['*']

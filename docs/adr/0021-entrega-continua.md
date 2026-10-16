@@ -24,7 +24,7 @@ Este projeto não tem um ambiente para onde implantar. O que ele pode garantir �
 
 **7. Nomes.** `main` é o último commit entregue da `main`; `sha-` e sete caracteres, um commit; `1.2.0`, `1.2` e `latest`, as versões. Num ambiente de verdade, implanta-se pelo digest, e não pelo nome: o nome muda de imagem, o digest não.
 
-**8. Dependências atualizadas pelo Dependabot**, toda semana e agrupadas: os pacotes do .NET e do npm, as actions — fixadas pelo SHA — e as bases das imagens — fixadas pelo digest. Uma versão nova só é proposta duas semanas depois de sair.
+**8. Dependências atualizadas pelo Dependabot**, toda semana e agrupadas: os pacotes do .NET e do npm, as actions — fixadas pelo SHA — e as bases das imagens — fixadas pelo digest. Uma versão nova só é proposta duas semanas depois de sair. Versão maior do .NET, do Node, do TypeScript, do PostgreSQL e das bases das imagens fica de fora: é migração planejada, com o que muda junto — o alvo dos projetos, o formato dos dados do banco, o volume do Compose —, e não um PR que o CI só pode reprovar.
 
 ## Consequências
 
