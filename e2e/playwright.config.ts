@@ -12,6 +12,9 @@ import { Api, Banco, Web } from './apoio/pilha';
  * no CI, que já o traz.
  */
 
+/** O processador só responde HTTP para dizer se está vivo e pronto. */
+const Processador = 'http://localhost:5082';
+
 /** O ambiente de quem roda os testes, e mais o que cada processo precisa. */
 function ambiente(extras: Record<string, string>): Record<string, string> {
   const atual = Object.entries(process.env).filter(
@@ -54,8 +57,9 @@ export default defineConfig({
     {
       name: 'Processador',
       command: 'dotnet run --no-build --no-launch-profile --project ../src/PlanejamentoObras.Processador',
-      wait: { stdout: /Application started/ },
-      env: ambiente({ ConnectionStrings__Planejamento: Banco }),
+      // Pronto é a verificação de saúde dele que diz: a fila girando e o banco ao alcance.
+      url: `${Processador}/saude/pronta`,
+      env: ambiente({ ASPNETCORE_URLS: Processador, ConnectionStrings__Planejamento: Banco }),
       timeout: 180_000,
     },
     {

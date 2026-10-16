@@ -42,6 +42,11 @@ namespace PlanejamentoObras.Infraestrutura.Persistencia.Migracoes
                         .HasColumnType("jsonb")
                         .HasColumnName("conteudo");
 
+                    b.Property<string>("ContextoDoRastreio")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("contexto_do_rastreio");
+
                     b.Property<Guid>("EmpresaId")
                         .HasColumnType("uuid")
                         .HasColumnName("empresa_id");

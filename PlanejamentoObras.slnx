@@ -3,6 +3,7 @@
     <Project Path="src/PlanejamentoObras.Api/PlanejamentoObras.Api.csproj" />
     <Project Path="src/PlanejamentoObras.Dominio/PlanejamentoObras.Dominio.csproj" />
     <Project Path="src/PlanejamentoObras.Infraestrutura/PlanejamentoObras.Infraestrutura.csproj" />
+    <Project Path="src/PlanejamentoObras.Observabilidade/PlanejamentoObras.Observabilidade.csproj" />
     <Project Path="src/PlanejamentoObras.Processador/PlanejamentoObras.Processador.csproj" />
     <Project Path="src/PlanejamentoObras.Processamento/PlanejamentoObras.Processamento.csproj" />
   </Folder>

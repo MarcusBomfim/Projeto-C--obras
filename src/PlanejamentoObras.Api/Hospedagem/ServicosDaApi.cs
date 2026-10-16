@@ -2,16 +2,20 @@ using System.Text.Json.Serialization;
 using PlanejamentoObras.Api.Http;
 using PlanejamentoObras.Api.Seguranca;
 using PlanejamentoObras.Infraestrutura.Persistencia;
+using PlanejamentoObras.Observabilidade;
 
 namespace PlanejamentoObras.Api.Hospedagem;
 
-/// <summary>Os serviços da API: persistência, segurança, erros, JSON e documentação.</summary>
+/// <summary>Os serviços da API: observabilidade, persistência, segurança, erros, JSON e documentação.</summary>
 internal static class ServicosDaApi
 {
     public static WebApplicationBuilder AdicionarApi(this WebApplicationBuilder builder)
     {
         var conexao = builder.Configuration.GetConnectionString("Planejamento")
             ?? throw new InvalidOperationException("Falta a cadeia de conexão ConnectionStrings:Planejamento.");
+
+        builder.AdicionarObservabilidade("planejamento-obras-api");
+        builder.Services.AddHealthChecks().VerificarBanco(conexao);
 
         builder.Services.AddHttpContextAccessor();
         builder.Services.AdicionarPersistencia<EmpresaDoUsuario>(conexao);

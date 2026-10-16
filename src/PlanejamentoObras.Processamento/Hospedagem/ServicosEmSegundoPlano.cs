@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -72,6 +73,9 @@ internal sealed partial class ServicoDasRotinas(
 
         do
         {
+            // Cada execução, um rastro: os comandos dela no banco ficam dentro dele.
+            using var execucao = TelemetriaDoProcessamento.Fonte.StartActivity($"rotina {rotina.GetType().Name}");
+
             try
             {
                 await using var escopo = escopos.CreateAsyncScope();
@@ -79,6 +83,8 @@ internal sealed partial class ServicoDasRotinas(
             }
             catch (Exception erro) when (!cancelamento.IsCancellationRequested)
             {
+                execucao?.SetStatus(ActivityStatusCode.Error, erro.Message);
+                execucao?.AddException(erro);
                 RotinaFalhou(registro, erro, rotina.GetType().Name);
             }
         }

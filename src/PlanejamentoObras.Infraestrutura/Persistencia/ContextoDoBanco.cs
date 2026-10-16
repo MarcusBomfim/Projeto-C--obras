@@ -214,6 +214,7 @@ public sealed class ContextoDoBanco(DbContextOptions<ContextoDoBanco> opcoes, IE
         mensagens.Property(registro => registro.TratadaEm).HasColumnName("tratada_em");
         mensagens.Property(registro => registro.AbandonadaEm).HasColumnName("abandonada_em");
         mensagens.Property(registro => registro.UltimoErro).HasColumnName("ultimo_erro");
+        mensagens.Property(registro => registro.ContextoDoRastreio).HasColumnName("contexto_do_rastreio").HasMaxLength(256);
 
         // A fila só olha o que está pendente: o índice só tem isso.
         mensagens

@@ -43,6 +43,12 @@ internal sealed class RegistroDeMensagem
 
     public string? UltimoErro { get; set; }
 
+    /// <summary>
+    /// O rastro de quem publicou a mensagem, no formato <c>traceparent</c> do
+    /// W3C: o tratamento continua dele. Nulo se ninguém estava rastreando.
+    /// </summary>
+    public string? ContextoDoRastreio { get; set; }
+
     public static RegistroDeMensagem De(EventoDeDominio evento, Guid empresa, int versaoDoAgregado, DateTimeOffset agora)
     {
         var (tipo, conteudo) = CatalogoDeMensagens.Escrever(evento);

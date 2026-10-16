@@ -1,5 +1,6 @@
 using PlanejamentoObras.Api.Http;
 using PlanejamentoObras.Api.Recursos;
+using PlanejamentoObras.Observabilidade;
 
 namespace PlanejamentoObras.Api.Hospedagem;
 
@@ -19,6 +20,7 @@ internal static class PipelineDaApi
         app.Use(Idempotencia.GuardarCorpo);
 
         app.MapOpenApi().AllowAnonymous();
+        app.MapearSaude();
         MapaDosRecursos.MapearTodos(app.MapGroup("/api"));
 
         return app;

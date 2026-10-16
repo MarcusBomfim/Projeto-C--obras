@@ -15,6 +15,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PlanejamentoObras.Infraestrutura\PlanejamentoObras.Infraestrutura.csproj" />
+    <ProjectReference Include="..\PlanejamentoObras.Observabilidade\PlanejamentoObras.Observabilidade.csproj" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="PlanejamentoObras.Api.Testes" />

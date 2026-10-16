@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
@@ -158,12 +159,24 @@ internal sealed class TabelaDeAgregados<TRegistro>(ContextoDoBanco contexto, Tim
     /// Entity Framework ordena as inserções pela chave, e a chave de duas
     /// mensagens do mesmo milissegundo sai em ordem qualquer.
     /// </summary>
+    /// <remarks>
+    /// Cada publicação é um passo no rastro de quem gravou — o pedido HTTP, na
+    /// API —, e a mensagem leva o contexto dela: o tratamento, em outro
+    /// processo e talvez minutos depois, continua o mesmo rastro (ADR-0019).
+    /// </remarks>
     private async Task GravarNaCaixa(List<RegistroDeMensagem> mensagens, CancellationToken cancelamento)
     {
         try
         {
             foreach (var mensagem in mensagens)
             {
+                using var publicacao = TelemetriaDaCaixaDeSaida.Fonte.StartActivity(
+                    $"publicar {mensagem.Tipo}",
+                    ActivityKind.Producer,
+                    parentContext: default,
+                    tags: TelemetriaDaCaixaDeSaida.Atributos(mensagem.Id, mensagem.Tipo, mensagem.EmpresaId, "send"));
+
+                mensagem.ContextoDoRastreio = (publicacao ?? Activity.Current)?.Id;
                 contexto.CaixaDeSaida.Add(mensagem);
                 await contexto.SaveChangesAsync(cancelamento);
             }

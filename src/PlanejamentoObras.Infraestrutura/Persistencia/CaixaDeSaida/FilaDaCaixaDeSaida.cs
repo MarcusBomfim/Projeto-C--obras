@@ -68,7 +68,15 @@ public sealed class FilaDaCaixaDeSaida(ContextoDoBanco contexto, EmpresaAssumida
 
         var registro = await contexto.CaixaDeSaida.AsNoTracking().SingleAsync(mensagem => mensagem.Id == id, cancelamento);
 
-        return new MensagemReservada(registro.Id, registro.Tipo, registro.Formato, registro.Conteudo, registro.Tentativas);
+        return new MensagemReservada(
+            registro.Id,
+            registro.Tipo,
+            registro.Formato,
+            registro.Conteudo,
+            registro.Tentativas,
+            registro.EmpresaId,
+            registro.OcorridaEm,
+            registro.ContextoDoRastreio);
     }
 
     public async Task MarcarTratada(Guid mensagem, CancellationToken cancelamento = default)
@@ -129,7 +137,17 @@ public sealed class FilaDaCaixaDeSaida(ContextoDoBanco contexto, EmpresaAssumida
 }
 
 /// <summary>Uma mensagem reservada para tratamento, já em nome da empresa dela.</summary>
-public sealed record MensagemReservada(Guid Id, string Tipo, short Formato, string Conteudo, int Tentativas)
+/// <param name="OcorridaEm">Quando o fato foi gravado: a espera da mensagem conta daí.</param>
+/// <param name="ContextoDoRastreio">O rastro de quem publicou, no formato <c>traceparent</c>; nulo se ninguém rastreava.</param>
+public sealed record MensagemReservada(
+    Guid Id,
+    string Tipo,
+    short Formato,
+    string Conteudo,
+    int Tentativas,
+    Guid Empresa,
+    DateTimeOffset OcorridaEm,
+    string? ContextoDoRastreio)
 {
     /// <summary>A mensagem no tipo dela — o que os tratadores recebem.</summary>
     public object Ler() => CatalogoDeMensagens.Ler(Tipo, Formato, Conteudo);

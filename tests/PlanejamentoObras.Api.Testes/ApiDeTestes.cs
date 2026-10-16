@@ -115,6 +115,12 @@ public sealed class ApiDeTestes : IAsyncLifetime
 
     public HttpClient Anonimo() => Api.CreateClient();
 
+    /// <summary>
+    /// A API com algo a mais — outra configuração, outro serviço —, num host
+    /// só dela e contra o mesmo banco. Quem pede, descarta.
+    /// </summary>
+    public WebApplicationFactory<Program> Variante(Action<IWebHostBuilder> ajuste) => Api.WithWebHostBuilder(ajuste);
+
     /// <summary>A API configurada para os testes: o banco do contêiner e os tokens emitidos aqui.</summary>
     private sealed class Fabrica(string conexao) : WebApplicationFactory<Program>
     {

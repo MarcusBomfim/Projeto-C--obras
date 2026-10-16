@@ -14,7 +14,9 @@ public static class ServicosDeProcessamento
     /// <summary>
     /// A persistência em nome da empresa de cada mensagem, o processador da
     /// caixa de saída, os tratadores e as rotinas — e os serviços que os rodam
-    /// enquanto o host estiver no ar.
+    /// enquanto o host estiver no ar. A verificação de que a fila está girando,
+    /// <see cref="FilaGirando"/>, fica para o host registrar, com as outras
+    /// verificações de saúde dele.
     /// </summary>
     /// <remarks>
     /// Tratadores e rotinas são encontrados no assembly, como os recursos da
@@ -36,6 +38,11 @@ public static class ServicosDeProcessamento
         servicos.AddScoped<ProjecaoDoPainel>();
         servicos.AddScoped<ManutencaoDoBanco>();
         servicos.AddSingleton<ProcessadorDaCaixaDeSaida>();
+
+        // As métricas da fila e o pulso que diz se ela está girando (ADR-0019).
+        servicos.AddMetrics();
+        servicos.AddSingleton<MetricasDaCaixaDeSaida>();
+        servicos.AddSingleton<PulsoDaFila>();
         servicos.AddSingleton(provedor => new EsperaPorMensagens(conexao, provedor.GetRequiredService<ILogger<EsperaPorMensagens>>()));
 
         foreach (var tipo in typeof(ServicosDeProcessamento).Assembly.GetTypes().Where(tipo => tipo is { IsClass: true, IsAbstract: false }))

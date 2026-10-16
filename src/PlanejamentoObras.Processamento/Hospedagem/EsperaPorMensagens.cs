@@ -1,6 +1,7 @@
 using System.Data;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using OpenTelemetry;
 
 namespace PlanejamentoObras.Processamento.Hospedagem;
 
@@ -10,9 +11,15 @@ namespace PlanejamentoObras.Processamento.Hospedagem;
 /// próxima volta (ADR-0017).
 /// </summary>
 /// <remarks>
+/// <para>
 /// Uma conexão só para escutar, fora do pool. Se ela cair, a espera vira o
 /// intervalo inteiro — o processador continua, só mais devagar — e a escuta
 /// é refeita na volta seguinte.
+/// </para>
+/// <para>
+/// Abrir a escuta não deixa rastro: é olhar a fila, como a reserva, e não
+/// conta história nenhuma (ADR-0019).
+/// </para>
 /// </remarks>
 public sealed partial class EsperaPorMensagens(string conexao, ILogger<EsperaPorMensagens> registro) : IAsyncDisposable
 {
@@ -67,6 +74,7 @@ public sealed partial class EsperaPorMensagens(string conexao, ILogger<EsperaPor
 
         await Descartar();
 
+        using var silencio = SuppressInstrumentationScope.Begin();
         var nova = new NpgsqlConnection(_conexaoDeEscuta);
         await nova.OpenAsync(cancelamento);
 

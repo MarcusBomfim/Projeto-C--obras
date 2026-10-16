@@ -1,16 +1,19 @@
-<Project Sdk="Microsoft.NET.Sdk.Worker">
+<Project Sdk="Microsoft.NET.Sdk.Web">
   <!--
     O processo que roda o processamento em segundo plano, separado da API:
     escala sozinho, cai sozinho, e a API continua atendendo enquanto ele
     reinicia. Dois ou mais no ar dividem a fila sem tratar nada duas vezes.
+    Responde HTTP só para dizer se está vivo e pronto (ADR-0019).
   -->
   <PropertyGroup>
     <RootNamespace>PlanejamentoObras.Processador</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <ProjectReference Include="..\PlanejamentoObras.Observabilidade\PlanejamentoObras.Observabilidade.csproj" />
+    <ProjectReference Include="..\PlanejamentoObras.Processamento\PlanejamentoObras.Processamento.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\PlanejamentoObras.Processamento\PlanejamentoObras.Processamento.csproj" />
+    <!-- Os testes sobem o host como ele é, para perguntar pela saúde dele. -->
+    <InternalsVisibleTo Include="PlanejamentoObras.Processamento.Testes" />
   </ItemGroup>
 </Project>

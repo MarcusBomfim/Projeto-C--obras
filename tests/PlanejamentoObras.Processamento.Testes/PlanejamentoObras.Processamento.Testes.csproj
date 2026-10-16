@@ -6,7 +6,10 @@
     <RootNamespace>PlanejamentoObras.Processamento.Testes</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
     <PackageReference Include="Testcontainers.PostgreSql" />
     <PackageReference Include="xunit.v3.mtp-v2" />
   </ItemGroup>
@@ -15,6 +18,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\PlanejamentoObras.Processamento\PlanejamentoObras.Processamento.csproj" />
+    <!-- O host do processador, para perguntar pela saúde dele como o orquestrador pergunta. -->
+    <ProjectReference Include="..\..\src\PlanejamentoObras.Processador\PlanejamentoObras.Processador.csproj" />
   </ItemGroup>
   <!--
     O mesmo banco dos testes da infraestrutura, com o papel do processador, e
@@ -23,5 +28,7 @@
   <ItemGroup>
     <Compile Include="..\PlanejamentoObras.Infraestrutura.Testes\Persistencia\BancoDeTestes.cs" Link="Banco\BancoDeTestes.cs" />
     <Compile Include="..\PlanejamentoObras.Dominio.Testes\FisicoFinanceiro\CasaTerrea.cs" Link="Geradores\CasaTerrea.cs" />
+    <!-- Onde o exportador em memória põe os rastros, com trava: o mesmo dos testes da API. -->
+    <Compile Include="..\PlanejamentoObras.Api.Testes\RastrosExportados.cs" Link="Apoio\RastrosExportados.cs" />
   </ItemGroup>
 </Project>
